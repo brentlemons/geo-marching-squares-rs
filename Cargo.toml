@@ -1,0 +1,38 @@
+[package]
+name = "geo-marching-squares-rs"
+version = "0.1.0"
+edition = "2021"
+authors = ["Brent Lemons <brent.lemons@gmail.com>"]
+description = "High-performance marching squares algorithm for geographic data with pre-transformed coordinates"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/brentlemons/geo-marching-squares-rs"
+keywords = ["gis", "contour", "marching-squares", "geospatial", "meteorology"]
+categories = ["science", "algorithms", "visualization"]
+readme = "README.md"
+
+[dependencies]
+# Core dependencies for geographic data processing
+geojson = "0.24"
+geo-types = "0.7"
+anyhow = "1.0"
+thiserror = "1.0"
+
+# Performance dependencies
+rayon = { version = "1.8", optional = true }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[features]
+default = ["parallel"]
+parallel = ["rayon"]
+great-circle = []  # Enable true spherical interpolation
+
+[dev-dependencies]
+approx = "0.5"
+criterion = { version = "0.5", features = ["html_reports"] }
+
+# [[bench]]
+# name = "marching_squares_bench"
+# harness = false
