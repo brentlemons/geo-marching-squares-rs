@@ -1,15 +1,18 @@
 //! Cell shape configurations for 3-level marching squares
 //!
-//! This module implements the full isoband algorithm with 3-level cell configurations.
+//! This is a direct port of the Java implementation from marching-squares-java.
 //! Each corner can be in one of 3 states: below lower (0), between thresholds (1), or above upper (2).
+//!
+//! Configuration encoding: TL(0/64/128) | TR(0/16/32) | BR(0/4/8) | BL(0/1/2)
+//! This creates 81 possible configurations mapped to values 0-170.
 
-use crate::interpolation::interpolate_side;
+use crate::interpolation::interpolate_point;
 use crate::types::{Edge, GridPoint, Move, Point, Side};
 
-/// Cell configuration value (0-170 for base-3 encoding)
+/// Cell configuration value (0-170 for 3-level encoding)
 pub type CellConfig = u8;
 
-/// Represents the edges and moves for a marching squares cell
+/// Represents the edges for a marching squares cell
 #[derive(Debug, Clone)]
 pub struct CellShape {
     /// List of edges in this cell (start point, end point, move direction)
@@ -17,12 +20,12 @@ pub struct CellShape {
 }
 
 impl CellShape {
-    /// Create a new cell shape with the given edges
+    /// Create a cell shape directly from edges (for testing)
     pub fn new(edges: Vec<Edge>) -> Self {
         Self { edges }
     }
 
-    /// Create edges for this cell configuration
+    /// Create edges for this cell configuration using full 81-case logic from Java
     pub fn from_config(
         config: CellConfig,
         tl: &GridPoint,
@@ -30,14 +33,19 @@ impl CellShape {
         br: &GridPoint,
         bl: &GridPoint,
         lower: f64,
-        _upper: f64,
+        upper: f64,
         smoothing: f64,
-        _is_top_edge: bool,
-        _is_right_edge: bool,
-        _is_bottom_edge: bool,
-        _is_left_edge: bool,
+        is_top_edge: bool,
+        is_right_edge: bool,
+        is_bottom_edge: bool,
+        is_left_edge: bool,
     ) -> Option<Self> {
-        // First, calculate interpolation points for each side
+        // Empty cells (all below or all above)
+        if config == 0 || config == 170 {
+            return None;
+        }
+
+        // Get corner points and values
         let tl_pt = Point::from_lon_lat(tl.lon, tl.lat);
         let tr_pt = Point::from_lon_lat(tr.lon, tr.lat);
         let br_pt = Point::from_lon_lat(br.lon, br.lat);
@@ -48,280 +56,1947 @@ impl CellShape {
         let br_val = br.value as f64;
         let bl_val = bl.value as f64;
 
-        // Helper to determine which interpolation points we need
-        // For full implementation, we need to handle all 81 cases
-        // For now, let's implement the most common cases
-
-        // Empty cells (all corners in same state)
-        if config == 0 || config == 0b10101010 {
-            return None; // All below or all above
-        }
-
-        // For this initial implementation, fall back to simpler isoline-based approach
-        // TODO: Implement full 81-case lookup table from Java implementation
-
-        // Convert to simple binary config using lower threshold
-        let simple_config = calculate_isoline_config(tl_val, tr_val, br_val, bl_val, lower);
-
-        get_simple_edges(
-            simple_config,
-            &tl_pt,
-            &tr_pt,
-            &br_pt,
-            &bl_pt,
-            tl_val,
-            tr_val,
-            br_val,
-            bl_val,
-            lower,
-            smoothing,
-        )
-    }
-}
-
-/// Calculate simple binary configuration for a given threshold
-fn calculate_isoline_config(tl: f64, tr: f64, br: f64, bl: f64, level: f64) -> u8 {
-    let mut config = 0u8;
-    if tl >= level {
-        config |= 0b1000;
-    }
-    if tr >= level {
-        config |= 0b0100;
-    }
-    if br >= level {
-        config |= 0b0010;
-    }
-    if bl >= level {
-        config |= 0b0001;
-    }
-    config
-}
-
-/// Get edges for simple binary marching squares configuration
-fn get_simple_edges(
-    config: u8,
-    tl_pt: &Point,
-    tr_pt: &Point,
-    br_pt: &Point,
-    bl_pt: &Point,
-    tl_val: f64,
-    tr_val: f64,
-    br_val: f64,
-    bl_val: f64,
-    level: f64,
-    smoothing: f64,
-) -> Option<CellShape> {
-    let mut edges = Vec::new();
-
-    match config {
-        0 | 15 => return None,
-
-        1 | 14 => {
-            // Bottom-left corner
-            let left = interpolate_side(
-                level,
-                Side::Left,
-                (tl_pt, tl_val),
-                (tr_pt, tr_val),
-                (br_pt, br_val),
-                (bl_pt, bl_val),
-                smoothing,
-            );
-            let bottom = interpolate_side(
-                level,
-                Side::Bottom,
-                (tl_pt, tl_val),
-                (tr_pt, tr_val),
-                (br_pt, br_val),
-                (bl_pt, bl_val),
-                smoothing,
-            );
-            edges.push(Edge::new(left, bottom, Move::None));
-        }
-
-        2 | 13 => {
-            // Bottom-right corner
-            let bottom = interpolate_side(
-                level,
-                Side::Bottom,
-                (tl_pt, tl_val),
-                (tr_pt, tr_val),
-                (br_pt, br_val),
-                (bl_pt, bl_val),
-                smoothing,
-            );
-            let right = interpolate_side(
-                level,
-                Side::Right,
-                (tl_pt, tl_val),
-                (tr_pt, tr_val),
-                (br_pt, br_val),
-                (bl_pt, bl_val),
-                smoothing,
-            );
-            edges.push(Edge::new(bottom, right, Move::None));
-        }
-
-        3 | 12 => {
-            // Bottom edge
-            let left = interpolate_side(
-                level,
-                Side::Left,
-                (tl_pt, tl_val),
-                (tr_pt, tr_val),
-                (br_pt, br_val),
-                (bl_pt, bl_val),
-                smoothing,
-            );
-            let right = interpolate_side(
-                level,
-                Side::Right,
-                (tl_pt, tl_val),
-                (tr_pt, tr_val),
-                (br_pt, br_val),
-                (bl_pt, bl_val),
-                smoothing,
-            );
-            edges.push(Edge::new(left, right, Move::None));
-        }
-
-        4 | 11 => {
-            // Top-right corner
-            let right = interpolate_side(
-                level,
-                Side::Right,
-                (tl_pt, tl_val),
-                (tr_pt, tr_val),
-                (br_pt, br_val),
-                (bl_pt, bl_val),
-                smoothing,
-            );
-            let top = interpolate_side(
-                level,
-                Side::Top,
-                (tl_pt, tl_val),
-                (tr_pt, tr_val),
-                (br_pt, br_val),
-                (bl_pt, bl_val),
-                smoothing,
-            );
-            edges.push(Edge::new(right, top, Move::None));
-        }
-
-        5 | 10 => {
-            // Saddle cases
-            let avg = (tl_val + tr_val + br_val + bl_val) / 4.0;
-
-            let top = interpolate_side(
-                level,
-                Side::Top,
-                (tl_pt, tl_val),
-                (tr_pt, tr_val),
-                (br_pt, br_val),
-                (bl_pt, bl_val),
-                smoothing,
-            );
-            let right = interpolate_side(
-                level,
-                Side::Right,
-                (tl_pt, tl_val),
-                (tr_pt, tr_val),
-                (br_pt, br_val),
-                (bl_pt, bl_val),
-                smoothing,
-            );
-            let bottom = interpolate_side(
-                level,
-                Side::Bottom,
-                (tl_pt, tl_val),
-                (tr_pt, tr_val),
-                (br_pt, br_val),
-                (bl_pt, bl_val),
-                smoothing,
-            );
-            let left = interpolate_side(
-                level,
-                Side::Left,
-                (tl_pt, tl_val),
-                (tr_pt, tr_val),
-                (br_pt, br_val),
-                (bl_pt, bl_val),
-                smoothing,
-            );
-
-            if config == 5 {
-                if avg >= level {
-                    edges.push(Edge::new(left.clone(), bottom, Move::None));
-                    edges.push(Edge::new(right, top, Move::None));
-                } else {
-                    edges.push(Edge::new(left.clone(), top, Move::None));
-                    edges.push(Edge::new(bottom, right, Move::None));
-                }
-            } else {
-                // config == 10
-                if avg >= level {
-                    edges.push(Edge::new(top.clone(), left, Move::None));
-                    edges.push(Edge::new(bottom.clone(), right, Move::None));
-                } else {
-                    edges.push(Edge::new(top.clone(), right, Move::None));
-                    edges.push(Edge::new(bottom.clone(), left, Move::None));
-                }
+        // Helper function to interpolate on a side
+        let interp = |level: f64, side: Side| -> Point {
+            match side {
+                Side::Top => interpolate_point(level, tl_val, tr_val, &tl_pt, &tr_pt, smoothing),
+                Side::Right => interpolate_point(level, tr_val, br_val, &tr_pt, &br_pt, smoothing),
+                Side::Bottom => interpolate_point(level, bl_val, br_val, &bl_pt, &br_pt, smoothing),
+                Side::Left => interpolate_point(level, tl_val, bl_val, &tl_pt, &bl_pt, smoothing),
             }
+        };
+
+        let mut edges = Vec::new();
+
+        // Route to appropriate shape handler based on config value
+        match config {
+            // Triangle cases (8 total)
+            169 | 1 => triangle_bl(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_bottom_edge, is_left_edge, &interp),
+            166 | 4 => triangle_br(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_right_edge, is_bottom_edge, &interp),
+            154 | 16 => triangle_tr(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_right_edge, is_top_edge, &interp),
+            106 | 64 => triangle_tl(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_left_edge, is_top_edge, &interp),
+
+            // Pentagon cases (24 total)
+            101 | 69 => pentagon_101(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp),
+            149 | 21 => pentagon_149(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp),
+            86 | 84 => pentagon_86(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp),
+            89 | 81 => pentagon_89(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp),
+            96 | 74 => pentagon_96(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp),
+            24 | 146 => pentagon_24(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp),
+            6 | 164 => pentagon_6(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp),
+            129 | 41 => pentagon_129(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp),
+            66 | 104 => pentagon_66(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp),
+            144 | 26 => pentagon_144(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp),
+            36 | 134 => pentagon_36(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp),
+            9 | 161 => pentagon_9(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp),
+
+            // Rectangle cases (12 total)
+            5 | 165 => rectangle_5(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp),
+            20 | 150 => rectangle_20(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp),
+            80 | 90 => rectangle_80(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp),
+            65 | 105 => rectangle_65(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp),
+            160 | 10 => rectangle_160(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp),
+            130 | 40 => rectangle_130(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp),
+
+            // Trapezoid cases (8 total)
+            168 | 2 => trapezoid_168(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp),
+            162 | 8 => trapezoid_162(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp),
+            138 | 32 => trapezoid_138(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp),
+            42 | 128 => trapezoid_42(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp),
+
+            // Hexagon cases (12 total)
+            37 | 133 => hexagon_37(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp),
+            148 | 22 => hexagon_148(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp),
+            82 | 88 => hexagon_82(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp),
+            73 | 97 => hexagon_73(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp),
+            145 | 25 => hexagon_145(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp),
+            70 | 100 => hexagon_70(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp),
+
+            // Saddle cases (14 total) - these are complex with average calculations
+            153 => saddle_153(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp),
+            102 => saddle_102(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp),
+            68 => saddle_68(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp),
+            17 => saddle_17(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp),
+            136 => saddle_136(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp),
+            34 => saddle_34(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp),
+            152 => saddle_152(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp),
+            18 => saddle_18(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp),
+            137 => saddle_137(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp),
+            33 => saddle_33(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp),
+            98 => saddle_98(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp),
+            72 => saddle_72(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp),
+            38 => saddle_38(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp),
+            132 => saddle_132(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp),
+
+            // Square case (1 total)
+            85 => square_85(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp),
+
+            _ => return None,
         }
 
-        6 | 9 => {
-            // Right edge
-            let top = interpolate_side(
-                level,
-                Side::Top,
-                (tl_pt, tl_val),
-                (tr_pt, tr_val),
-                (br_pt, br_val),
-                (bl_pt, bl_val),
-                smoothing,
-            );
-            let bottom = interpolate_side(
-                level,
-                Side::Bottom,
-                (tl_pt, tl_val),
-                (tr_pt, tr_val),
-                (br_pt, br_val),
-                (bl_pt, bl_val),
-                smoothing,
-            );
-            edges.push(Edge::new(top, bottom, Move::None));
+        if edges.is_empty() {
+            None
+        } else {
+            Some(Self { edges })
         }
-
-        7 | 8 => {
-            // Top-left corner
-            let top = interpolate_side(
-                level,
-                Side::Top,
-                (tl_pt, tl_val),
-                (tr_pt, tr_val),
-                (br_pt, br_val),
-                (bl_pt, bl_val),
-                smoothing,
-            );
-            let left = interpolate_side(
-                level,
-                Side::Left,
-                (tl_pt, tl_val),
-                (tr_pt, tr_val),
-                (br_pt, br_val),
-                (bl_pt, bl_val),
-                smoothing,
-            );
-            edges.push(Edge::new(top, left, Move::None));
-        }
-
-        _ => return None,
     }
+}
 
-    if edges.is_empty() {
-        None
+// ============================================================================
+// Triangle implementations (4 functions)
+// ============================================================================
+
+// Case 169 | 1 (2221 | 0001) - Bottom-left triangle
+#[allow(clippy::too_many_arguments)]
+fn triangle_bl(
+    edges: &mut Vec<Edge>,
+    _tl_pt: &Point, _tr_pt: &Point, _br_pt: &Point, _bl_pt: &Point,
+    _tl_val: f64, _tr_val: f64, _br_val: f64, bl_val: f64,
+    lower: f64, upper: f64, _smoothing: f64,
+    is_bottom: bool, is_left: bool,
+    interp: &impl Fn(f64, Side) -> Point,
+) {
+    // Java: points[0], points[1], points[2]
+    let level = if bl_val >= lower { upper } else { lower };
+    let p0 = interp(level, Side::Bottom);
+    let p1 = interp(level, Side::Left);
+    let p2 = interp(level, Side::Left);
+
+    if is_bottom {
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Left));
+    }
+    if is_left {
+        edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
+    }
+    edges.push(Edge::new(p2, p0, Move::Down));
+}
+
+// Case 166 | 4 (2212 | 0010) - Bottom-right triangle
+#[allow(clippy::too_many_arguments)]
+fn triangle_br(
+    edges: &mut Vec<Edge>,
+    _tl_pt: &Point, _tr_pt: &Point, _br_pt: &Point, _bl_pt: &Point,
+    _tl_val: f64, _tr_val: f64, br_val: f64, _bl_val: f64,
+    lower: f64, upper: f64, _smoothing: f64,
+    is_right: bool, is_bottom: bool,
+    interp: &impl Fn(f64, Side) -> Point,
+) {
+    let level = if br_val >= lower { upper } else { lower };
+    let p0 = interp(level, Side::Right);
+    let p1 = interp(level, Side::Bottom);
+    let p2 = interp(level, Side::Bottom);
+
+    if is_right {
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Down));
+    }
+    if is_bottom {
+        edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
+    }
+    edges.push(Edge::new(p2, p0, Move::Right));
+}
+
+// Case 154 | 16 (2122 | 0100) - Top-right triangle
+#[allow(clippy::too_many_arguments)]
+fn triangle_tr(
+    edges: &mut Vec<Edge>,
+    _tl_pt: &Point, _tr_pt: &Point, _br_pt: &Point, _bl_pt: &Point,
+    _tl_val: f64, tr_val: f64, _br_val: f64, _bl_val: f64,
+    lower: f64, upper: f64, _smoothing: f64,
+    is_right: bool, is_top: bool,
+    interp: &impl Fn(f64, Side) -> Point,
+) {
+    let level = if tr_val >= lower { upper } else { lower };
+    let p0 = interp(level, Side::Right);
+    let p1 = interp(level, Side::Top);
+    let p2 = interp(level, Side::Top);
+
+    if is_right {
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
+    }
+    edges.push(Edge::new(p1.clone(), p2.clone(), Move::Up));
+    if is_top {
+        edges.push(Edge::new(p2, p0, Move::Right));
+    }
+}
+
+// Case 106 | 64 (1222 | 1000) - Top-left triangle
+#[allow(clippy::too_many_arguments)]
+fn triangle_tl(
+    edges: &mut Vec<Edge>,
+    _tl_pt: &Point, _tr_pt: &Point, _br_pt: &Point, _bl_pt: &Point,
+    tl_val: f64, _tr_val: f64, _br_val: f64, _bl_val: f64,
+    lower: f64, upper: f64, _smoothing: f64,
+    is_left: bool, is_top: bool,
+    interp: &impl Fn(f64, Side) -> Point,
+) {
+    let level = if tl_val >= lower { upper } else { lower };
+    let p0 = interp(level, Side::Left);
+    let p1 = interp(level, Side::Top);
+    let p2 = interp(level, Side::Top);
+
+    edges.push(Edge::new(p0.clone(), p1.clone(), Move::Left));
+    if is_left {
+        edges.push(Edge::new(p1.clone(), p2.clone(), Move::Up));
+    }
+    if is_top {
+        edges.push(Edge::new(p2, p0, Move::None));
+    }
+}
+
+// ============================================================================
+// Pentagon implementations (12 functions)
+// ============================================================================
+
+// Case 101 | 69 (1211 | 1011)
+#[allow(clippy::too_many_arguments)]
+fn pentagon_101(
+    edges: &mut Vec<Edge>,
+    _tl_pt: &Point, _tr_pt: &Point, _br_pt: &Point, _bl_pt: &Point,
+    _tl_val: f64, _tr_val: f64, _br_val: f64, _bl_val: f64,
+    lower: f64, upper: f64, _smoothing: f64,
+    is_top: bool, is_right: bool, is_bottom: bool, is_left: bool,
+    interp: &impl Fn(f64, Side) -> Point,
+) {
+    let p0 = interp(upper, Side::Top);
+    let p1 = interp(upper, Side::Right);
+    let p2 = interp(upper, Side::Bottom);
+    let p3 = interp(upper, Side::Left);
+    let p4 = interp(upper, Side::Top);
+
+    edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
+    if is_right {
+        edges.push(Edge::new(p1.clone(), p2.clone(), Move::Down));
+    }
+    if is_bottom {
+        edges.push(Edge::new(p2.clone(), p3.clone(), Move::Left));
+    }
+    if is_left {
+        edges.push(Edge::new(p3.clone(), p4.clone(), Move::Up));
+    }
+    if is_top {
+        edges.push(Edge::new(p4, p0, Move::None));
+    }
+}
+
+// Case 149 | 21 (2111 | 0111)
+#[allow(clippy::too_many_arguments)]
+fn pentagon_149(
+    edges: &mut Vec<Edge>,
+    _tl_pt: &Point, _tr_pt: &Point, _br_pt: &Point, _bl_pt: &Point,
+    _tl_val: f64, _tr_val: f64, _br_val: f64, _bl_val: f64,
+    lower: f64, upper: f64, _smoothing: f64,
+    is_top: bool, is_right: bool, is_bottom: bool, is_left: bool,
+    interp: &impl Fn(f64, Side) -> Point,
+) {
+    let p0 = interp(upper, Side::Right);
+    let p1 = interp(upper, Side::Bottom);
+    let p2 = interp(upper, Side::Left);
+    let p3 = interp(upper, Side::Left);
+    let p4 = interp(upper, Side::Top);
+
+    if is_right {
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Down));
+    }
+    if is_bottom {
+        edges.push(Edge::new(p1.clone(), p2.clone(), Move::Left));
+    }
+    if is_left {
+        edges.push(Edge::new(p2.clone(), p3.clone(), Move::None));
+    }
+    edges.push(Edge::new(p3.clone(), p4.clone(), Move::Up));
+    if is_top {
+        edges.push(Edge::new(p4, p0, Move::Right));
+    }
+}
+
+// Case 86 | 84 (1112 | 1110)
+#[allow(clippy::too_many_arguments)]
+fn pentagon_86(
+    edges: &mut Vec<Edge>,
+    _tl_pt: &Point, _tr_pt: &Point, _br_pt: &Point, _bl_pt: &Point,
+    _tl_val: f64, _tr_val: f64, _br_val: f64, _bl_val: f64,
+    lower: f64, upper: f64, _smoothing: f64,
+    is_top: bool, is_right: bool, is_bottom: bool, is_left: bool,
+    interp: &impl Fn(f64, Side) -> Point,
+) {
+    let p0 = interp(upper, Side::Right);
+    let p1 = interp(upper, Side::Bottom);
+    let p2 = interp(upper, Side::Bottom);
+    let p3 = interp(upper, Side::Left);
+    let p4 = interp(upper, Side::Top);
+
+    if is_right {
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Down));
+    }
+    if is_bottom {
+        edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
+    }
+    edges.push(Edge::new(p2.clone(), p3.clone(), Move::Left));
+    if is_left {
+        edges.push(Edge::new(p3.clone(), p4.clone(), Move::Up));
+    }
+    if is_top {
+        edges.push(Edge::new(p4, p0, Move::Right));
+    }
+}
+
+// Case 89 | 81 (1121 | 1101)
+#[allow(clippy::too_many_arguments)]
+fn pentagon_89(
+    edges: &mut Vec<Edge>,
+    _tl_pt: &Point, _tr_pt: &Point, _br_pt: &Point, _bl_pt: &Point,
+    _tl_val: f64, _tr_val: f64, _br_val: f64, _bl_val: f64,
+    lower: f64, upper: f64, _smoothing: f64,
+    is_top: bool, is_right: bool, is_bottom: bool, is_left: bool,
+    interp: &impl Fn(f64, Side) -> Point,
+) {
+    let p0 = interp(upper, Side::Right);
+    let p1 = interp(upper, Side::Right);
+    let p2 = interp(upper, Side::Bottom);
+    let p3 = interp(upper, Side::Left);
+    let p4 = interp(upper, Side::Top);
+
+    if is_right {
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
+    }
+    edges.push(Edge::new(p1.clone(), p2.clone(), Move::Down));
+    if is_bottom {
+        edges.push(Edge::new(p2.clone(), p3.clone(), Move::Left));
+    }
+    if is_left {
+        edges.push(Edge::new(p3.clone(), p4.clone(), Move::Up));
+    }
+    if is_top {
+        edges.push(Edge::new(p4, p0, Move::Right));
+    }
+}
+
+// Case 96 | 74 (1200 | 1022)
+#[allow(clippy::too_many_arguments)]
+fn pentagon_96(
+    edges: &mut Vec<Edge>,
+    _tl_pt: &Point, _tr_pt: &Point, _br_pt: &Point, _bl_pt: &Point,
+    _tl_val: f64, _tr_val: f64, _br_val: f64, _bl_val: f64,
+    lower: f64, upper: f64, _smoothing: f64,
+    is_top: bool, is_right: bool, is_bottom: bool, is_left: bool,
+    interp: &impl Fn(f64, Side) -> Point,
+) {
+    let p0 = interp(upper, Side::Top);
+    let p1 = interp(upper, Side::Right);
+    let p2 = interp(upper, Side::Right);
+    let p3 = interp(lower, Side::Left);
+    let p4 = interp(lower, Side::Top);
+
+    edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
+    if is_right {
+        edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
+    }
+    edges.push(Edge::new(p2.clone(), p3.clone(), Move::Left));
+    if is_left {
+        edges.push(Edge::new(p3.clone(), p4.clone(), Move::Up));
+    }
+    if is_top {
+        edges.push(Edge::new(p4, p0, Move::None));
+    }
+}
+
+// Case 24 | 146 (0120 | 2102)
+#[allow(clippy::too_many_arguments)]
+fn pentagon_24(
+    edges: &mut Vec<Edge>,
+    _tl_pt: &Point, _tr_pt: &Point, _br_pt: &Point, _bl_pt: &Point,
+    _tl_val: f64, _tr_val: f64, _br_val: f64, _bl_val: f64,
+    lower: f64, upper: f64, _smoothing: f64,
+    is_top: bool, is_right: bool, is_bottom: bool, is_left: bool,
+    interp: &impl Fn(f64, Side) -> Point,
+) {
+    let p0 = interp(lower, Side::Right);
+    let p1 = interp(lower, Side::Right);
+    let p2 = interp(lower, Side::Bottom);
+    let p3 = interp(lower, Side::Left);
+    let p4 = interp(lower, Side::Top);
+
+    if is_right {
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
+    }
+    edges.push(Edge::new(p1.clone(), p2.clone(), Move::Down));
+    if is_bottom {
+        edges.push(Edge::new(p2.clone(), p3.clone(), Move::None));
+    }
+    edges.push(Edge::new(p3.clone(), p4.clone(), Move::Up));
+    if is_top {
+        edges.push(Edge::new(p4, p0, Move::Right));
+    }
+}
+
+// Case 6 | 164 (0012 | 2210)
+#[allow(clippy::too_many_arguments)]
+fn pentagon_6(
+    edges: &mut Vec<Edge>,
+    _tl_pt: &Point, _tr_pt: &Point, _br_pt: &Point, _bl_pt: &Point,
+    _tl_val: f64, _tr_val: f64, _br_val: f64, _bl_val: f64,
+    lower: f64, upper: f64, _smoothing: f64,
+    is_top: bool, is_right: bool, is_bottom: bool, is_left: bool,
+    interp: &impl Fn(f64, Side) -> Point,
+) {
+    let p0 = interp(lower, Side::Right);
+    let p1 = interp(lower, Side::Bottom);
+    let p2 = interp(lower, Side::Bottom);
+    let p3 = interp(lower, Side::Left);
+    let p4 = interp(lower, Side::Top);
+
+    if is_right {
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Down));
+    }
+    if is_bottom {
+        edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
+    }
+    edges.push(Edge::new(p2.clone(), p3.clone(), Move::Left));
+    if is_left {
+        edges.push(Edge::new(p3.clone(), p4.clone(), Move::None));
+    }
+    edges.push(Edge::new(p4, p0, Move::Right));
+}
+
+// Case 129 | 41 (2001 | 0221)
+#[allow(clippy::too_many_arguments)]
+fn pentagon_129(
+    edges: &mut Vec<Edge>,
+    _tl_pt: &Point, _tr_pt: &Point, _br_pt: &Point, _bl_pt: &Point,
+    _tl_val: f64, _tr_val: f64, _br_val: f64, _bl_val: f64,
+    lower: f64, upper: f64, _smoothing: f64,
+    is_top: bool, is_right: bool, is_bottom: bool, is_left: bool,
+    interp: &impl Fn(f64, Side) -> Point,
+) {
+    let p0 = interp(lower, Side::Left);
+    let p1 = interp(lower, Side::Bottom);
+    let p2 = interp(lower, Side::Left);
+    let p3 = interp(lower, Side::Left);
+    let p4 = interp(lower, Side::Top);
+
+    edges.push(Edge::new(p0.clone(), p1.clone(), Move::Down));
+    if is_bottom {
+        edges.push(Edge::new(p1.clone(), p2.clone(), Move::Left));
+    }
+    if is_left {
+        edges.push(Edge::new(p2.clone(), p3.clone(), Move::None));
+    }
+    edges.push(Edge::new(p3.clone(), p4.clone(), Move::Up));
+    if is_top {
+        edges.push(Edge::new(p4, p0, Move::None));
+    }
+}
+
+// Case 66 | 104 (1002 | 1220)
+#[allow(clippy::too_many_arguments)]
+fn pentagon_66(
+    edges: &mut Vec<Edge>,
+    _tl_pt: &Point, _tr_pt: &Point, _br_pt: &Point, _bl_pt: &Point,
+    _tl_val: f64, _tr_val: f64, _br_val: f64, _bl_val: f64,
+    lower: f64, upper: f64, _smoothing: f64,
+    is_top: bool, is_right: bool, is_bottom: bool, is_left: bool,
+    interp: &impl Fn(f64, Side) -> Point,
+) {
+    let p0 = interp(upper, Side::Left);
+    let p1 = interp(upper, Side::Bottom);
+    let p2 = interp(upper, Side::Bottom);
+    let p3 = interp(upper, Side::Left);
+    let p4 = interp(upper, Side::Top);
+
+    edges.push(Edge::new(p0.clone(), p1.clone(), Move::Down));
+    if is_bottom {
+        edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
+    }
+    edges.push(Edge::new(p2.clone(), p3.clone(), Move::Left));
+    if is_left {
+        edges.push(Edge::new(p3.clone(), p4.clone(), Move::Up));
+    }
+    if is_top {
+        edges.push(Edge::new(p4, p0, Move::None));
+    }
+}
+
+// Case 144 | 26 (2100 | 0122)
+#[allow(clippy::too_many_arguments)]
+fn pentagon_144(
+    edges: &mut Vec<Edge>,
+    _tl_pt: &Point, _tr_pt: &Point, _br_pt: &Point, _bl_pt: &Point,
+    _tl_val: f64, _tr_val: f64, _br_val: f64, _bl_val: f64,
+    lower: f64, upper: f64, _smoothing: f64,
+    is_top: bool, is_right: bool, is_bottom: bool, is_left: bool,
+    interp: &impl Fn(f64, Side) -> Point,
+) {
+    let p0 = interp(lower, Side::Right);
+    let p1 = interp(lower, Side::Bottom);
+    let p2 = interp(lower, Side::Left);
+    let p3 = interp(lower, Side::Left);
+    let p4 = interp(lower, Side::Top);
+
+    if is_right {
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
+    }
+    edges.push(Edge::new(p1.clone(), p2.clone(), Move::Left));
+    if is_left {
+        edges.push(Edge::new(p2.clone(), p3.clone(), Move::None));
+    }
+    edges.push(Edge::new(p3.clone(), p4.clone(), Move::Up));
+    if is_top {
+        edges.push(Edge::new(p4, p0, Move::Right));
+    }
+}
+
+// Case 36 | 134 (0210 | 2012)
+#[allow(clippy::too_many_arguments)]
+fn pentagon_36(
+    edges: &mut Vec<Edge>,
+    _tl_pt: &Point, _tr_pt: &Point, _br_pt: &Point, _bl_pt: &Point,
+    _tl_val: f64, _tr_val: f64, _br_val: f64, _bl_val: f64,
+    lower: f64, upper: f64, _smoothing: f64,
+    is_top: bool, is_right: bool, is_bottom: bool, is_left: bool,
+    interp: &impl Fn(f64, Side) -> Point,
+) {
+    let p0 = interp(lower, Side::Top);
+    let p1 = interp(lower, Side::Right);
+    let p2 = interp(lower, Side::Bottom);
+    let p3 = interp(lower, Side::Bottom);
+    let p4 = interp(lower, Side::Top);
+
+    edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
+    if is_right {
+        edges.push(Edge::new(p1.clone(), p2.clone(), Move::Down));
+    }
+    if is_bottom {
+        edges.push(Edge::new(p2.clone(), p3.clone(), Move::None));
+    }
+    edges.push(Edge::new(p3.clone(), p4.clone(), Move::Up));
+    if is_top {
+        edges.push(Edge::new(p4, p0, Move::None));
+    }
+}
+
+// Case 9 | 161 (0021 | 2201)
+#[allow(clippy::too_many_arguments)]
+fn pentagon_9(
+    edges: &mut Vec<Edge>,
+    _tl_pt: &Point, _tr_pt: &Point, _br_pt: &Point, _bl_pt: &Point,
+    _tl_val: f64, _tr_val: f64, _br_val: f64, _bl_val: f64,
+    lower: f64, upper: f64, _smoothing: f64,
+    is_top: bool, is_right: bool, is_bottom: bool, is_left: bool,
+    interp: &impl Fn(f64, Side) -> Point,
+) {
+    let p0 = interp(lower, Side::Right);
+    let p1 = interp(lower, Side::Right);
+    let p2 = interp(lower, Side::Bottom);
+    let p3 = interp(lower, Side::Left);
+    let p4 = interp(lower, Side::Top);
+
+    if is_right {
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
+    }
+    edges.push(Edge::new(p1.clone(), p2.clone(), Move::Down));
+    if is_bottom {
+        edges.push(Edge::new(p2.clone(), p3.clone(), Move::Left));
+    }
+    if is_left {
+        edges.push(Edge::new(p3.clone(), p4.clone(), Move::None));
+    }
+    edges.push(Edge::new(p4, p0, Move::Right));
+}
+
+// ============================================================================
+// Rectangle implementations (6 functions)
+// ============================================================================
+
+// Case 5 | 165 (0011 | 2211)
+#[allow(clippy::too_many_arguments)]
+fn rectangle_5(
+    edges: &mut Vec<Edge>,
+    _tl_pt: &Point, _tr_pt: &Point, _br_pt: &Point, _bl_pt: &Point,
+    _tl_val: f64, _tr_val: f64, _br_val: f64, _bl_val: f64,
+    lower: f64, upper: f64, _smoothing: f64,
+    is_top: bool, is_right: bool, is_bottom: bool, is_left: bool,
+    interp: &impl Fn(f64, Side) -> Point,
+) {
+    let p0 = interp(lower, Side::Right);
+    let p1 = interp(lower, Side::Bottom);
+    let p2 = interp(lower, Side::Left);
+    let p3 = interp(lower, Side::Top);
+
+    if is_right {
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Down));
+    }
+    if is_bottom {
+        edges.push(Edge::new(p1.clone(), p2.clone(), Move::Left));
+    }
+    if is_left {
+        edges.push(Edge::new(p2.clone(), p3.clone(), Move::None));
+    }
+    edges.push(Edge::new(p3, p0, Move::Right));
+}
+
+// Case 20 | 150 (0110 | 2112)
+#[allow(clippy::too_many_arguments)]
+fn rectangle_20(
+    edges: &mut Vec<Edge>,
+    _tl_pt: &Point, _tr_pt: &Point, _br_pt: &Point, _bl_pt: &Point,
+    _tl_val: f64, _tr_val: f64, _br_val: f64, _bl_val: f64,
+    lower: f64, upper: f64, _smoothing: f64,
+    is_top: bool, is_right: bool, is_bottom: bool, is_left: bool,
+    interp: &impl Fn(f64, Side) -> Point,
+) {
+    let p0 = interp(lower, Side::Right);
+    let p1 = interp(lower, Side::Bottom);
+    let p2 = interp(lower, Side::Left);
+    let p3 = interp(lower, Side::Top);
+
+    if is_right {
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Down));
+    }
+    if is_bottom {
+        edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
+    }
+    edges.push(Edge::new(p2.clone(), p3.clone(), Move::Up));
+    if is_top {
+        edges.push(Edge::new(p3, p0, Move::Right));
+    }
+}
+
+// Case 80 | 90 (1100 | 1122)
+#[allow(clippy::too_many_arguments)]
+fn rectangle_80(
+    edges: &mut Vec<Edge>,
+    _tl_pt: &Point, _tr_pt: &Point, _br_pt: &Point, _bl_pt: &Point,
+    _tl_val: f64, _tr_val: f64, _br_val: f64, _bl_val: f64,
+    lower: f64, upper: f64, _smoothing: f64,
+    is_top: bool, is_right: bool, is_bottom: bool, is_left: bool,
+    interp: &impl Fn(f64, Side) -> Point,
+) {
+    let p0 = interp(upper, Side::Right);
+    let p1 = interp(upper, Side::Bottom);
+    let p2 = interp(upper, Side::Left);
+    let p3 = interp(upper, Side::Top);
+
+    if is_right {
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
+    }
+    edges.push(Edge::new(p1.clone(), p2.clone(), Move::Left));
+    if is_left {
+        edges.push(Edge::new(p2.clone(), p3.clone(), Move::Up));
+    }
+    if is_top {
+        edges.push(Edge::new(p3, p0, Move::Right));
+    }
+}
+
+// Case 65 | 105 (1001 | 1221)
+#[allow(clippy::too_many_arguments)]
+fn rectangle_65(
+    edges: &mut Vec<Edge>,
+    _tl_pt: &Point, _tr_pt: &Point, _br_pt: &Point, _bl_pt: &Point,
+    _tl_val: f64, _tr_val: f64, _br_val: f64, _bl_val: f64,
+    lower: f64, upper: f64, _smoothing: f64,
+    is_top: bool, is_right: bool, is_bottom: bool, is_left: bool,
+    interp: &impl Fn(f64, Side) -> Point,
+) {
+    let p0 = interp(upper, Side::Left);
+    let p1 = interp(upper, Side::Bottom);
+    let p2 = interp(upper, Side::Left);
+    let p3 = interp(upper, Side::Top);
+
+    edges.push(Edge::new(p0.clone(), p1.clone(), Move::Down));
+    if is_bottom {
+        edges.push(Edge::new(p1.clone(), p2.clone(), Move::Left));
+    }
+    if is_left {
+        edges.push(Edge::new(p2.clone(), p3.clone(), Move::Up));
+    }
+    if is_top {
+        edges.push(Edge::new(p3, p0, Move::None));
+    }
+}
+
+// Case 160 | 10 (2200 | 0022)
+#[allow(clippy::too_many_arguments)]
+fn rectangle_160(
+    edges: &mut Vec<Edge>,
+    _tl_pt: &Point, _tr_pt: &Point, _br_pt: &Point, _bl_pt: &Point,
+    _tl_val: f64, _tr_val: f64, _br_val: f64, _bl_val: f64,
+    lower: f64, upper: f64, _smoothing: f64,
+    is_top: bool, is_right: bool, is_bottom: bool, is_left: bool,
+    interp: &impl Fn(f64, Side) -> Point,
+) {
+    let p0 = interp(lower, Side::Right);
+    let p1 = interp(lower, Side::Bottom);
+    let p2 = interp(lower, Side::Left);
+    let p3 = interp(lower, Side::Top);
+
+    if is_right {
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
+    }
+    edges.push(Edge::new(p1.clone(), p2.clone(), Move::Left));
+    if is_left {
+        edges.push(Edge::new(p2.clone(), p3.clone(), Move::None));
+    }
+    edges.push(Edge::new(p3, p0, Move::Right));
+}
+
+// Case 130 | 40 (2002 | 0220)
+#[allow(clippy::too_many_arguments)]
+fn rectangle_130(
+    edges: &mut Vec<Edge>,
+    _tl_pt: &Point, _tr_pt: &Point, _br_pt: &Point, _bl_pt: &Point,
+    _tl_val: f64, _tr_val: f64, _br_val: f64, _bl_val: f64,
+    lower: f64, upper: f64, _smoothing: f64,
+    is_top: bool, is_right: bool, is_bottom: bool, is_left: bool,
+    interp: &impl Fn(f64, Side) -> Point,
+) {
+    let p0 = interp(lower, Side::Left);
+    let p1 = interp(lower, Side::Bottom);
+    let p2 = interp(lower, Side::Left);
+    let p3 = interp(lower, Side::Top);
+
+    edges.push(Edge::new(p0.clone(), p1.clone(), Move::Down));
+    if is_bottom {
+        edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
+    }
+    edges.push(Edge::new(p2.clone(), p3.clone(), Move::Up));
+    if is_top {
+        edges.push(Edge::new(p3, p0, Move::None));
+    }
+}
+
+// ============================================================================
+// Trapezoid implementations (4 functions)
+// ============================================================================
+
+// Case 168 | 2 (2220 | 0002)
+#[allow(clippy::too_many_arguments)]
+fn trapezoid_168(
+    edges: &mut Vec<Edge>,
+    _tl_pt: &Point, _tr_pt: &Point, _br_pt: &Point, _bl_pt: &Point,
+    _tl_val: f64, _tr_val: f64, _br_val: f64, _bl_val: f64,
+    lower: f64, upper: f64, _smoothing: f64,
+    is_top: bool, is_right: bool, is_bottom: bool, is_left: bool,
+    interp: &impl Fn(f64, Side) -> Point,
+) {
+    let p0 = interp(lower, Side::Bottom);
+    let p1 = interp(lower, Side::Bottom);
+    let p2 = interp(lower, Side::Left);
+    let p3 = interp(lower, Side::Left);
+
+    if is_bottom {
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
+    }
+    edges.push(Edge::new(p1.clone(), p2.clone(), Move::Left));
+    if is_left {
+        edges.push(Edge::new(p2.clone(), p3.clone(), Move::None));
+    }
+    edges.push(Edge::new(p3, p0, Move::Down));
+}
+
+// Case 162 | 8 (2202 | 0020)
+#[allow(clippy::too_many_arguments)]
+fn trapezoid_162(
+    edges: &mut Vec<Edge>,
+    _tl_pt: &Point, _tr_pt: &Point, _br_pt: &Point, _bl_pt: &Point,
+    _tl_val: f64, _tr_val: f64, _br_val: f64, _bl_val: f64,
+    lower: f64, upper: f64, _smoothing: f64,
+    is_top: bool, is_right: bool, is_bottom: bool, is_left: bool,
+    interp: &impl Fn(f64, Side) -> Point,
+) {
+    let p0 = interp(lower, Side::Right);
+    let p1 = interp(lower, Side::Right);
+    let p2 = interp(lower, Side::Bottom);
+    let p3 = interp(lower, Side::Bottom);
+
+    if is_right {
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
+    }
+    edges.push(Edge::new(p1.clone(), p2.clone(), Move::Down));
+    if is_bottom {
+        edges.push(Edge::new(p2.clone(), p3.clone(), Move::None));
+    }
+    edges.push(Edge::new(p3, p0, Move::Right));
+}
+
+// Case 138 | 32 (2022 | 0200)
+#[allow(clippy::too_many_arguments)]
+fn trapezoid_138(
+    edges: &mut Vec<Edge>,
+    _tl_pt: &Point, _tr_pt: &Point, _br_pt: &Point, _bl_pt: &Point,
+    _tl_val: f64, _tr_val: f64, _br_val: f64, _bl_val: f64,
+    lower: f64, upper: f64, _smoothing: f64,
+    is_top: bool, is_right: bool, is_bottom: bool, is_left: bool,
+    interp: &impl Fn(f64, Side) -> Point,
+) {
+    let p0 = interp(lower, Side::Top);
+    let p1 = interp(lower, Side::Right);
+    let p2 = interp(lower, Side::Right);
+    let p3 = interp(lower, Side::Top);
+
+    edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
+    if is_right {
+        edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
+    }
+    edges.push(Edge::new(p2.clone(), p3.clone(), Move::Up));
+    if is_top {
+        edges.push(Edge::new(p3, p0, Move::None));
+    }
+}
+
+// Case 42 | 128 (0222 | 2000)
+#[allow(clippy::too_many_arguments)]
+fn trapezoid_42(
+    edges: &mut Vec<Edge>,
+    _tl_pt: &Point, _tr_pt: &Point, _br_pt: &Point, _bl_pt: &Point,
+    _tl_val: f64, _tr_val: f64, _br_val: f64, _bl_val: f64,
+    lower: f64, upper: f64, _smoothing: f64,
+    is_top: bool, is_right: bool, is_bottom: bool, is_left: bool,
+    interp: &impl Fn(f64, Side) -> Point,
+) {
+    let p0 = interp(lower, Side::Left);
+    let p1 = interp(lower, Side::Left);
+    let p2 = interp(lower, Side::Top);
+    let p3 = interp(lower, Side::Top);
+
+    edges.push(Edge::new(p0.clone(), p1.clone(), Move::Left));
+    if is_left {
+        edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
+    }
+    edges.push(Edge::new(p2.clone(), p3.clone(), Move::Up));
+    if is_top {
+        edges.push(Edge::new(p3, p0, Move::None));
+    }
+}
+
+// ============================================================================
+// Hexagon implementations (6 functions)
+// ============================================================================
+
+// Case 37 | 133 (0211 | 2011)
+#[allow(clippy::too_many_arguments)]
+fn hexagon_37(
+    edges: &mut Vec<Edge>,
+    _tl_pt: &Point, _tr_pt: &Point, _br_pt: &Point, _bl_pt: &Point,
+    _tl_val: f64, _tr_val: f64, _br_val: f64, _bl_val: f64,
+    lower: f64, upper: f64, _smoothing: f64,
+    is_top: bool, is_right: bool, is_bottom: bool, is_left: bool,
+    interp: &impl Fn(f64, Side) -> Point,
+) {
+    let p0 = interp(lower, Side::Top);
+    let p1 = interp(lower, Side::Right);
+    let p2 = interp(lower, Side::Bottom);
+    let p3 = interp(lower, Side::Left);
+    let p4 = interp(lower, Side::Left);
+    let p5 = interp(lower, Side::Top);
+
+    edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
+    if is_right {
+        edges.push(Edge::new(p1.clone(), p2.clone(), Move::Down));
+    }
+    if is_bottom {
+        edges.push(Edge::new(p2.clone(), p3.clone(), Move::Left));
+    }
+    if is_left {
+        edges.push(Edge::new(p3.clone(), p4.clone(), Move::None));
+    }
+    edges.push(Edge::new(p4.clone(), p5.clone(), Move::Up));
+    if is_top {
+        edges.push(Edge::new(p5, p0, Move::None));
+    }
+}
+
+// Case 148 | 22 (2110 | 0112)
+#[allow(clippy::too_many_arguments)]
+fn hexagon_148(
+    edges: &mut Vec<Edge>,
+    _tl_pt: &Point, _tr_pt: &Point, _br_pt: &Point, _bl_pt: &Point,
+    _tl_val: f64, _tr_val: f64, _br_val: f64, _bl_val: f64,
+    lower: f64, upper: f64, _smoothing: f64,
+    is_top: bool, is_right: bool, is_bottom: bool, is_left: bool,
+    interp: &impl Fn(f64, Side) -> Point,
+) {
+    let p0 = interp(lower, Side::Right);
+    let p1 = interp(lower, Side::Bottom);
+    let p2 = interp(lower, Side::Bottom);
+    let p3 = interp(lower, Side::Left);
+    let p4 = interp(lower, Side::Left);
+    let p5 = interp(lower, Side::Top);
+
+    if is_right {
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Down));
+    }
+    if is_bottom {
+        edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
+    }
+    edges.push(Edge::new(p2.clone(), p3.clone(), Move::Left));
+    if is_left {
+        edges.push(Edge::new(p3.clone(), p4.clone(), Move::None));
+    }
+    edges.push(Edge::new(p4.clone(), p5.clone(), Move::Up));
+    if is_top {
+        edges.push(Edge::new(p5, p0, Move::Right));
+    }
+}
+
+// Case 82 | 88 (1102 | 1120)
+#[allow(clippy::too_many_arguments)]
+fn hexagon_82(
+    edges: &mut Vec<Edge>,
+    _tl_pt: &Point, _tr_pt: &Point, _br_pt: &Point, _bl_pt: &Point,
+    _tl_val: f64, _tr_val: f64, _br_val: f64, _bl_val: f64,
+    lower: f64, upper: f64, _smoothing: f64,
+    is_top: bool, is_right: bool, is_bottom: bool, is_left: bool,
+    interp: &impl Fn(f64, Side) -> Point,
+) {
+    let p0 = interp(upper, Side::Right);
+    let p1 = interp(upper, Side::Right);
+    let p2 = interp(upper, Side::Bottom);
+    let p3 = interp(upper, Side::Bottom);
+    let p4 = interp(upper, Side::Left);
+    let p5 = interp(upper, Side::Top);
+
+    if is_right {
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
+    }
+    edges.push(Edge::new(p1.clone(), p2.clone(), Move::Down));
+    if is_bottom {
+        edges.push(Edge::new(p2.clone(), p3.clone(), Move::None));
+    }
+    edges.push(Edge::new(p3.clone(), p4.clone(), Move::Left));
+    if is_left {
+        edges.push(Edge::new(p4.clone(), p5.clone(), Move::Up));
+    }
+    if is_top {
+        edges.push(Edge::new(p5, p0, Move::Right));
+    }
+}
+
+// Case 73 | 97 (1021 | 1201)
+#[allow(clippy::too_many_arguments)]
+fn hexagon_73(
+    edges: &mut Vec<Edge>,
+    _tl_pt: &Point, _tr_pt: &Point, _br_pt: &Point, _bl_pt: &Point,
+    _tl_val: f64, _tr_val: f64, _br_val: f64, _bl_val: f64,
+    lower: f64, upper: f64, _smoothing: f64,
+    is_top: bool, is_right: bool, is_bottom: bool, is_left: bool,
+    interp: &impl Fn(f64, Side) -> Point,
+) {
+    let p0 = interp(upper, Side::Top);
+    let p1 = interp(upper, Side::Right);
+    let p2 = interp(upper, Side::Right);
+    let p3 = interp(upper, Side::Bottom);
+    let p4 = interp(upper, Side::Left);
+    let p5 = interp(upper, Side::Top);
+
+    edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
+    if is_right {
+        edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
+    }
+    edges.push(Edge::new(p2.clone(), p3.clone(), Move::Down));
+    if is_bottom {
+        edges.push(Edge::new(p3.clone(), p4.clone(), Move::Left));
+    }
+    if is_left {
+        edges.push(Edge::new(p4.clone(), p5.clone(), Move::Up));
+    }
+    if is_top {
+        edges.push(Edge::new(p5, p0, Move::None));
+    }
+}
+
+// Case 145 | 25 (2101 | 0121)
+#[allow(clippy::too_many_arguments)]
+fn hexagon_145(
+    edges: &mut Vec<Edge>,
+    _tl_pt: &Point, _tr_pt: &Point, _br_pt: &Point, _bl_pt: &Point,
+    _tl_val: f64, _tr_val: f64, _br_val: f64, _bl_val: f64,
+    lower: f64, upper: f64, _smoothing: f64,
+    is_top: bool, is_right: bool, is_bottom: bool, is_left: bool,
+    interp: &impl Fn(f64, Side) -> Point,
+) {
+    let p0 = interp(lower, Side::Right);
+    let p1 = interp(lower, Side::Right);
+    let p2 = interp(lower, Side::Bottom);
+    let p3 = interp(lower, Side::Left);
+    let p4 = interp(lower, Side::Left);
+    let p5 = interp(lower, Side::Top);
+
+    if is_right {
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
+    }
+    edges.push(Edge::new(p1.clone(), p2.clone(), Move::Down));
+    if is_bottom {
+        edges.push(Edge::new(p2.clone(), p3.clone(), Move::Left));
+    }
+    if is_left {
+        edges.push(Edge::new(p3.clone(), p4.clone(), Move::None));
+    }
+    edges.push(Edge::new(p4.clone(), p5.clone(), Move::Up));
+    if is_top {
+        edges.push(Edge::new(p5, p0, Move::Right));
+    }
+}
+
+// Case 70 | 100 (1012 | 1210)
+#[allow(clippy::too_many_arguments)]
+fn hexagon_70(
+    edges: &mut Vec<Edge>,
+    _tl_pt: &Point, _tr_pt: &Point, _br_pt: &Point, _bl_pt: &Point,
+    _tl_val: f64, _tr_val: f64, _br_val: f64, _bl_val: f64,
+    lower: f64, upper: f64, _smoothing: f64,
+    is_top: bool, is_right: bool, is_bottom: bool, is_left: bool,
+    interp: &impl Fn(f64, Side) -> Point,
+) {
+    let p0 = interp(upper, Side::Top);
+    let p1 = interp(upper, Side::Right);
+    let p2 = interp(upper, Side::Bottom);
+    let p3 = interp(upper, Side::Bottom);
+    let p4 = interp(upper, Side::Left);
+    let p5 = interp(upper, Side::Top);
+
+    edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
+    if is_right {
+        edges.push(Edge::new(p1.clone(), p2.clone(), Move::Down));
+    }
+    if is_bottom {
+        edges.push(Edge::new(p2.clone(), p3.clone(), Move::None));
+    }
+    edges.push(Edge::new(p3.clone(), p4.clone(), Move::Left));
+    if is_left {
+        edges.push(Edge::new(p4.clone(), p5.clone(), Move::Up));
+    }
+    if is_top {
+        edges.push(Edge::new(p5, p0, Move::None));
+    }
+}
+
+// ============================================================================
+// Saddle implementations (14 functions) - Complex cases with average calculations
+// ============================================================================
+
+// Case 153 (2121)
+#[allow(clippy::too_many_arguments)]
+fn saddle_153(
+    edges: &mut Vec<Edge>,
+    _tl_pt: &Point, tr_pt: &Point, _br_pt: &Point, bl_pt: &Point,
+    tl_val: f64, tr_val: f64, br_val: f64, bl_val: f64,
+    lower: f64, upper: f64, _smoothing: f64,
+    is_top: bool, is_right: bool, is_bottom: bool, is_left: bool,
+    interp: &impl Fn(f64, Side) -> Point,
+) {
+    let average = (tl_val + tr_val + br_val + bl_val) / 4.0;
+
+    if average >= upper {
+        let p0 = interp(upper, Side::Right);
+        let p1 = interp(upper, Side::Top);
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Up));
+        if is_top {
+            edges.push(Edge::new(p1.clone(), tr_pt.clone(), Move::Right));
+        }
+        if is_right {
+            edges.push(Edge::new(tr_pt.clone(), p0.clone(), Move::None));
+        }
+
+        let p3 = interp(upper, Side::Left);
+        let p4 = interp(upper, Side::Bottom);
+        edges.push(Edge::new(p3.clone(), p4.clone(), Move::Down));
+        if is_bottom {
+            edges.push(Edge::new(p4.clone(), bl_pt.clone(), Move::Left));
+        }
+        if is_left {
+            edges.push(Edge::new(bl_pt.clone(), p3.clone(), Move::None));
+        }
+    } else if average >= lower && average < upper {
+        let p0 = interp(upper, Side::Right);
+        let p1 = interp(upper, Side::Bottom);
+        let p3 = interp(upper, Side::Left);
+        let p4 = interp(upper, Side::Top);
+
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Down));
+        if is_bottom {
+            edges.push(Edge::new(p1.clone(), bl_pt.clone(), Move::Left));
+        }
+        if is_left {
+            edges.push(Edge::new(bl_pt.clone(), p3.clone(), Move::None));
+        }
+        edges.push(Edge::new(p3.clone(), p4.clone(), Move::Up));
+        if is_top {
+            edges.push(Edge::new(p4.clone(), tr_pt.clone(), Move::Right));
+        }
+        if is_right {
+            edges.push(Edge::new(tr_pt.clone(), p0.clone(), Move::None));
+        }
+    }
+}
+
+// Case 102 (1212)
+#[allow(clippy::too_many_arguments)]
+fn saddle_102(
+    edges: &mut Vec<Edge>,
+    tl_pt: &Point, _tr_pt: &Point, br_pt: &Point, _bl_pt: &Point,
+    tl_val: f64, tr_val: f64, br_val: f64, bl_val: f64,
+    lower: f64, upper: f64, _smoothing: f64,
+    is_top: bool, is_right: bool, is_bottom: bool, is_left: bool,
+    interp: &impl Fn(f64, Side) -> Point,
+) {
+    let average = (tl_val + tr_val + br_val + bl_val) / 4.0;
+
+    if average >= upper {
+        let p0 = interp(upper, Side::Top);
+        let p1 = interp(upper, Side::Left);
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Left));
+        if is_left {
+            edges.push(Edge::new(p1.clone(), tl_pt.clone(), Move::Up));
+        }
+        if is_top {
+            edges.push(Edge::new(tl_pt.clone(), p0.clone(), Move::None));
+        }
+
+        let p3 = interp(upper, Side::Bottom);
+        let p4 = interp(upper, Side::Right);
+        edges.push(Edge::new(p3.clone(), p4.clone(), Move::Right));
+        if is_right {
+            edges.push(Edge::new(p4.clone(), br_pt.clone(), Move::Down));
+        }
+        if is_bottom {
+            edges.push(Edge::new(br_pt.clone(), p3.clone(), Move::None));
+        }
+    } else if average >= lower && average < upper {
+        let p0 = interp(upper, Side::Top);
+        let p1 = interp(upper, Side::Right);
+        let p3 = interp(upper, Side::Bottom);
+        let p4 = interp(upper, Side::Left);
+
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
+        if is_right {
+            edges.push(Edge::new(p1.clone(), br_pt.clone(), Move::Down));
+        }
+        if is_bottom {
+            edges.push(Edge::new(br_pt.clone(), p3.clone(), Move::None));
+        }
+        edges.push(Edge::new(p3.clone(), p4.clone(), Move::Left));
+        if is_left {
+            edges.push(Edge::new(p4.clone(), tl_pt.clone(), Move::Up));
+        }
+        if is_top {
+            edges.push(Edge::new(tl_pt.clone(), p0.clone(), Move::None));
+        }
+    }
+}
+
+// Case 68 (1010)
+#[allow(clippy::too_many_arguments)]
+fn saddle_68(
+    edges: &mut Vec<Edge>,
+    tl_pt: &Point, _tr_pt: &Point, br_pt: &Point, _bl_pt: &Point,
+    tl_val: f64, tr_val: f64, br_val: f64, bl_val: f64,
+    lower: f64, upper: f64, _smoothing: f64,
+    is_top: bool, is_right: bool, is_bottom: bool, is_left: bool,
+    interp: &impl Fn(f64, Side) -> Point,
+) {
+    let average = (tl_val + tr_val + br_val + bl_val) / 4.0;
+
+    if average < lower {
+        let p0 = interp(lower, Side::Top);
+        let p1 = interp(lower, Side::Left);
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Left));
+        if is_left {
+            edges.push(Edge::new(p1.clone(), tl_pt.clone(), Move::Up));
+        }
+        if is_top {
+            edges.push(Edge::new(tl_pt.clone(), p0.clone(), Move::None));
+        }
+
+        let p3 = interp(lower, Side::Bottom);
+        let p4 = interp(lower, Side::Right);
+        edges.push(Edge::new(p3.clone(), p4.clone(), Move::Right));
+        if is_right {
+            edges.push(Edge::new(p4.clone(), br_pt.clone(), Move::Down));
+        }
+        if is_bottom {
+            edges.push(Edge::new(br_pt.clone(), p3.clone(), Move::None));
+        }
+    } else if average >= lower && average < upper {
+        let p0 = interp(lower, Side::Top);
+        let p1 = interp(lower, Side::Right);
+        let p3 = interp(lower, Side::Bottom);
+        let p4 = interp(lower, Side::Left);
+
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
+        if is_right {
+            edges.push(Edge::new(p1.clone(), br_pt.clone(), Move::Down));
+        }
+        if is_bottom {
+            edges.push(Edge::new(br_pt.clone(), p3.clone(), Move::None));
+        }
+        edges.push(Edge::new(p3.clone(), p4.clone(), Move::Left));
+        if is_left {
+            edges.push(Edge::new(p4.clone(), tl_pt.clone(), Move::Up));
+        }
+        if is_top {
+            edges.push(Edge::new(tl_pt.clone(), p0.clone(), Move::None));
+        }
+    }
+}
+
+// Case 17 (0101)
+#[allow(clippy::too_many_arguments)]
+fn saddle_17(
+    edges: &mut Vec<Edge>,
+    _tl_pt: &Point, tr_pt: &Point, _br_pt: &Point, bl_pt: &Point,
+    tl_val: f64, tr_val: f64, br_val: f64, bl_val: f64,
+    lower: f64, upper: f64, _smoothing: f64,
+    is_top: bool, is_right: bool, is_bottom: bool, is_left: bool,
+    interp: &impl Fn(f64, Side) -> Point,
+) {
+    let average = (tl_val + tr_val + br_val + bl_val) / 4.0;
+
+    if average < lower {
+        let p0 = interp(lower, Side::Right);
+        let p1 = interp(lower, Side::Top);
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Up));
+        if is_top {
+            edges.push(Edge::new(p1.clone(), tr_pt.clone(), Move::Right));
+        }
+        if is_right {
+            edges.push(Edge::new(tr_pt.clone(), p0.clone(), Move::None));
+        }
+
+        let p3 = interp(lower, Side::Left);
+        let p4 = interp(lower, Side::Bottom);
+        edges.push(Edge::new(p3.clone(), p4.clone(), Move::Down));
+        if is_bottom {
+            edges.push(Edge::new(p4.clone(), bl_pt.clone(), Move::Left));
+        }
+        if is_left {
+            edges.push(Edge::new(bl_pt.clone(), p3.clone(), Move::None));
+        }
+    } else if average >= lower && average < upper {
+        let p0 = interp(lower, Side::Right);
+        let p1 = interp(lower, Side::Bottom);
+        let p3 = interp(lower, Side::Left);
+        let p4 = interp(lower, Side::Top);
+
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Down));
+        if is_bottom {
+            edges.push(Edge::new(p1.clone(), bl_pt.clone(), Move::Left));
+        }
+        if is_left {
+            edges.push(Edge::new(bl_pt.clone(), p3.clone(), Move::None));
+        }
+        edges.push(Edge::new(p3.clone(), p4.clone(), Move::Up));
+        if is_top {
+            edges.push(Edge::new(p4.clone(), tr_pt.clone(), Move::Right));
+        }
+        if is_right {
+            edges.push(Edge::new(tr_pt.clone(), p0.clone(), Move::None));
+        }
+    }
+}
+
+// Case 136 (2020) - 8 point case
+#[allow(clippy::too_many_arguments)]
+fn saddle_136(
+    edges: &mut Vec<Edge>,
+    _tl_pt: &Point, _tr_pt: &Point, _br_pt: &Point, _bl_pt: &Point,
+    tl_val: f64, tr_val: f64, br_val: f64, bl_val: f64,
+    lower: f64, upper: f64, _smoothing: f64,
+    is_top: bool, is_right: bool, is_bottom: bool, is_left: bool,
+    interp: &impl Fn(f64, Side) -> Point,
+) {
+    let average = (tl_val + tr_val + br_val + bl_val) / 4.0;
+
+    if average < lower {
+        let p0 = interp(lower, Side::Top);
+        let p1 = interp(lower, Side::Left);
+        let p2 = interp(upper, Side::Left);
+        let p3 = interp(upper, Side::Top);
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Left));
+        if is_left {
+            edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
+        }
+        edges.push(Edge::new(p2.clone(), p3.clone(), Move::Up));
+        if is_top {
+            edges.push(Edge::new(p3.clone(), p0.clone(), Move::None));
+        }
+
+        let p4 = interp(upper, Side::Right);
+        let p5 = interp(upper, Side::Bottom);
+        let p6 = interp(lower, Side::Bottom);
+        let p7 = interp(lower, Side::Right);
+        edges.push(Edge::new(p4.clone(), p5.clone(), Move::Down));
+        if is_bottom {
+            edges.push(Edge::new(p5.clone(), p6.clone(), Move::None));
+        }
+        edges.push(Edge::new(p6.clone(), p7.clone(), Move::Right));
+        if is_right {
+            edges.push(Edge::new(p7, p4, Move::None));
+        }
+    } else if average >= upper {
+        let p0 = interp(lower, Side::Top);
+        let p1 = interp(lower, Side::Right);
+        let p2 = interp(upper, Side::Right);
+        let p3 = interp(upper, Side::Top);
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
+        if is_right {
+            edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
+        }
+        edges.push(Edge::new(p2.clone(), p3.clone(), Move::Up));
+        if is_top {
+            edges.push(Edge::new(p3.clone(), p0.clone(), Move::None));
+        }
+
+        let p4 = interp(lower, Side::Bottom);
+        let p5 = interp(lower, Side::Left);
+        let p6 = interp(upper, Side::Left);
+        let p7 = interp(upper, Side::Bottom);
+        edges.push(Edge::new(p4.clone(), p5.clone(), Move::Left));
+        if is_left {
+            edges.push(Edge::new(p5.clone(), p6.clone(), Move::None));
+        }
+        edges.push(Edge::new(p6.clone(), p7.clone(), Move::Down));
+        if is_bottom {
+            edges.push(Edge::new(p7, p4, Move::None));
+        }
     } else {
-        Some(CellShape::new(edges))
+        let p0 = interp(lower, Side::Top);
+        let p1 = interp(lower, Side::Right);
+        let p2 = interp(upper, Side::Right);
+        let p3 = interp(upper, Side::Bottom);
+        let p4 = interp(lower, Side::Bottom);
+        let p5 = interp(lower, Side::Left);
+        let p6 = interp(upper, Side::Left);
+        let p7 = interp(upper, Side::Top);
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
+        if is_right {
+            edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
+        }
+        edges.push(Edge::new(p2.clone(), p3.clone(), Move::Down));
+        if is_bottom {
+            edges.push(Edge::new(p3.clone(), p4.clone(), Move::None));
+        }
+        edges.push(Edge::new(p4.clone(), p5.clone(), Move::Left));
+        if is_left {
+            edges.push(Edge::new(p5.clone(), p6.clone(), Move::None));
+        }
+        edges.push(Edge::new(p6.clone(), p7.clone(), Move::Up));
+        if is_top {
+            edges.push(Edge::new(p7, p0, Move::None));
+        }
+    }
+}
+
+// Case 34 (0202) - 8 point case
+#[allow(clippy::too_many_arguments)]
+fn saddle_34(
+    edges: &mut Vec<Edge>,
+    _tl_pt: &Point, _tr_pt: &Point, _br_pt: &Point, _bl_pt: &Point,
+    tl_val: f64, tr_val: f64, br_val: f64, bl_val: f64,
+    lower: f64, upper: f64, _smoothing: f64,
+    is_top: bool, is_right: bool, is_bottom: bool, is_left: bool,
+    interp: &impl Fn(f64, Side) -> Point,
+) {
+    let average = (tl_val + tr_val + br_val + bl_val) / 4.0;
+
+    if average >= upper {
+        let p0 = interp(upper, Side::Top);
+        let p1 = interp(upper, Side::Left);
+        let p2 = interp(lower, Side::Left);
+        let p3 = interp(lower, Side::Top);
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Left));
+        if is_left {
+            edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
+        }
+        edges.push(Edge::new(p2.clone(), p3.clone(), Move::Up));
+        if is_top {
+            edges.push(Edge::new(p3.clone(), p0.clone(), Move::None));
+        }
+
+        let p4 = interp(lower, Side::Right);
+        let p5 = interp(lower, Side::Bottom);
+        let p6 = interp(upper, Side::Bottom);
+        let p7 = interp(upper, Side::Right);
+        edges.push(Edge::new(p4.clone(), p5.clone(), Move::Down));
+        if is_bottom {
+            edges.push(Edge::new(p5.clone(), p6.clone(), Move::None));
+        }
+        edges.push(Edge::new(p6.clone(), p7.clone(), Move::Right));
+        if is_right {
+            edges.push(Edge::new(p7, p4, Move::None));
+        }
+    } else if average < lower {
+        let p0 = interp(upper, Side::Top);
+        let p1 = interp(upper, Side::Right);
+        let p2 = interp(lower, Side::Right);
+        let p3 = interp(lower, Side::Top);
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
+        if is_right {
+            edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
+        }
+        edges.push(Edge::new(p2.clone(), p3.clone(), Move::Up));
+        if is_top {
+            edges.push(Edge::new(p3.clone(), p0.clone(), Move::None));
+        }
+
+        let p4 = interp(upper, Side::Bottom);
+        let p5 = interp(upper, Side::Left);
+        let p6 = interp(lower, Side::Left);
+        let p7 = interp(lower, Side::Bottom);
+        edges.push(Edge::new(p4.clone(), p5.clone(), Move::Left));
+        if is_left {
+            edges.push(Edge::new(p5.clone(), p6.clone(), Move::None));
+        }
+        edges.push(Edge::new(p6.clone(), p7.clone(), Move::Down));
+        if is_bottom {
+            edges.push(Edge::new(p7, p4, Move::None));
+        }
+    } else {
+        let p0 = interp(upper, Side::Top);
+        let p1 = interp(upper, Side::Right);
+        let p2 = interp(lower, Side::Right);
+        let p3 = interp(lower, Side::Bottom);
+        let p4 = interp(upper, Side::Bottom);
+        let p5 = interp(upper, Side::Left);
+        let p6 = interp(lower, Side::Left);
+        let p7 = interp(lower, Side::Top);
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
+        if is_right {
+            edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
+        }
+        edges.push(Edge::new(p2.clone(), p3.clone(), Move::Down));
+        if is_bottom {
+            edges.push(Edge::new(p3.clone(), p4.clone(), Move::None));
+        }
+        edges.push(Edge::new(p4.clone(), p5.clone(), Move::Left));
+        if is_left {
+            edges.push(Edge::new(p5.clone(), p6.clone(), Move::None));
+        }
+        edges.push(Edge::new(p6.clone(), p7.clone(), Move::Up));
+        if is_top {
+            edges.push(Edge::new(p7, p0, Move::None));
+        }
+    }
+}
+
+// Case 152 (2120) - 7 point case
+#[allow(clippy::too_many_arguments)]
+fn saddle_152(
+    edges: &mut Vec<Edge>,
+    _tl_pt: &Point, tr_pt: &Point, _br_pt: &Point, _bl_pt: &Point,
+    tl_val: f64, tr_val: f64, br_val: f64, bl_val: f64,
+    lower: f64, upper: f64, _smoothing: f64,
+    is_top: bool, is_right: bool, is_bottom: bool, is_left: bool,
+    interp: &impl Fn(f64, Side) -> Point,
+) {
+    let average = (tl_val + tr_val + br_val + bl_val) / 4.0;
+
+    if average < lower || average >= upper {
+        let p0 = interp(upper, Side::Right);
+        let p1 = interp(upper, Side::Top);
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Up));
+        if is_top {
+            edges.push(Edge::new(p1.clone(), tr_pt.clone(), Move::Right));
+        }
+        if is_right {
+            edges.push(Edge::new(tr_pt.clone(), p0.clone(), Move::None));
+        }
+
+        let p3 = interp(lower, Side::Bottom);
+        let p4 = interp(lower, Side::Left);
+        let p5 = interp(upper, Side::Left);
+        let p6 = interp(upper, Side::Bottom);
+        edges.push(Edge::new(p3.clone(), p4.clone(), Move::Left));
+        if is_left {
+            edges.push(Edge::new(p4.clone(), p5.clone(), Move::None));
+        }
+        edges.push(Edge::new(p5.clone(), p6.clone(), Move::Down));
+        if is_bottom {
+            edges.push(Edge::new(p6, p3, Move::None));
+        }
+    } else if average >= lower && average < upper {
+        let p0 = interp(upper, Side::Right);
+        let p1 = interp(upper, Side::Bottom);
+        let p2 = interp(lower, Side::Bottom);
+        let p3 = interp(lower, Side::Left);
+        let p4 = interp(upper, Side::Left);
+        let p5 = interp(upper, Side::Top);
+
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Down));
+        if is_bottom {
+            edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
+        }
+        edges.push(Edge::new(p2.clone(), p3.clone(), Move::Left));
+        if is_left {
+            edges.push(Edge::new(p3.clone(), p4.clone(), Move::None));
+        }
+        edges.push(Edge::new(p4.clone(), p5.clone(), Move::Up));
+        if is_top {
+            edges.push(Edge::new(p5.clone(), tr_pt.clone(), Move::Right));
+        }
+        if is_right {
+            edges.push(Edge::new(tr_pt.clone(), p0.clone(), Move::None));
+        }
+    }
+}
+
+// Case 18 (0102) - 7 point case
+#[allow(clippy::too_many_arguments)]
+fn saddle_18(
+    edges: &mut Vec<Edge>,
+    _tl_pt: &Point, tr_pt: &Point, _br_pt: &Point, _bl_pt: &Point,
+    tl_val: f64, tr_val: f64, br_val: f64, bl_val: f64,
+    lower: f64, upper: f64, _smoothing: f64,
+    is_top: bool, is_right: bool, is_bottom: bool, is_left: bool,
+    interp: &impl Fn(f64, Side) -> Point,
+) {
+    let average = (tl_val + tr_val + br_val + bl_val) / 4.0;
+
+    if average < lower || average >= upper {
+        let p0 = interp(lower, Side::Right);
+        let p1 = interp(lower, Side::Top);
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Up));
+        if is_top {
+            edges.push(Edge::new(p1.clone(), tr_pt.clone(), Move::Right));
+        }
+        if is_right {
+            edges.push(Edge::new(tr_pt.clone(), p0.clone(), Move::None));
+        }
+
+        let p3 = interp(upper, Side::Bottom);
+        let p4 = interp(upper, Side::Left);
+        let p5 = interp(lower, Side::Left);
+        let p6 = interp(lower, Side::Bottom);
+        edges.push(Edge::new(p3.clone(), p4.clone(), Move::Left));
+        if is_left {
+            edges.push(Edge::new(p4.clone(), p5.clone(), Move::None));
+        }
+        edges.push(Edge::new(p5.clone(), p6.clone(), Move::Down));
+        if is_bottom {
+            edges.push(Edge::new(p6, p3, Move::None));
+        }
+    } else if average >= lower && average < upper {
+        let p0 = interp(lower, Side::Right);
+        let p1 = interp(lower, Side::Bottom);
+        let p2 = interp(upper, Side::Bottom);
+        let p3 = interp(upper, Side::Left);
+        let p4 = interp(lower, Side::Left);
+        let p5 = interp(lower, Side::Top);
+
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Down));
+        if is_bottom {
+            edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
+        }
+        edges.push(Edge::new(p2.clone(), p3.clone(), Move::Left));
+        if is_left {
+            edges.push(Edge::new(p3.clone(), p4.clone(), Move::None));
+        }
+        edges.push(Edge::new(p4.clone(), p5.clone(), Move::Up));
+        if is_top {
+            edges.push(Edge::new(p5.clone(), tr_pt.clone(), Move::Right));
+        }
+        if is_right {
+            edges.push(Edge::new(tr_pt.clone(), p0.clone(), Move::None));
+        }
+    }
+}
+
+// Case 137 (2021) - 7 point case
+#[allow(clippy::too_many_arguments)]
+fn saddle_137(
+    edges: &mut Vec<Edge>,
+    _tl_pt: &Point, _tr_pt: &Point, _br_pt: &Point, bl_pt: &Point,
+    tl_val: f64, tr_val: f64, br_val: f64, bl_val: f64,
+    lower: f64, upper: f64, _smoothing: f64,
+    is_top: bool, is_right: bool, is_bottom: bool, is_left: bool,
+    interp: &impl Fn(f64, Side) -> Point,
+) {
+    let average = (tl_val + tr_val + br_val + bl_val) / 4.0;
+
+    if average < lower || average >= upper {
+        let p0 = interp(lower, Side::Top);
+        let p1 = interp(lower, Side::Right);
+        let p2 = interp(upper, Side::Right);
+        let p3 = interp(upper, Side::Top);
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
+        if is_right {
+            edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
+        }
+        edges.push(Edge::new(p2.clone(), p3.clone(), Move::Up));
+        if is_top {
+            edges.push(Edge::new(p3.clone(), p0.clone(), Move::None));
+        }
+
+        let p4 = interp(upper, Side::Left);
+        let p5 = interp(upper, Side::Bottom);
+        edges.push(Edge::new(p4.clone(), p5.clone(), Move::Down));
+        if is_bottom {
+            edges.push(Edge::new(p5.clone(), bl_pt.clone(), Move::Left));
+        }
+        if is_left {
+            edges.push(Edge::new(bl_pt.clone(), p4.clone(), Move::None));
+        }
+    } else if average >= lower && average < upper {
+        let p0 = interp(lower, Side::Top);
+        let p1 = interp(lower, Side::Right);
+        let p2 = interp(upper, Side::Right);
+        let p3 = interp(upper, Side::Bottom);
+        let p5 = interp(upper, Side::Left);
+        let p6 = interp(upper, Side::Top);
+
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
+        if is_right {
+            edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
+        }
+        edges.push(Edge::new(p2.clone(), p3.clone(), Move::Down));
+        if is_bottom {
+            edges.push(Edge::new(p3.clone(), bl_pt.clone(), Move::Left));
+        }
+        if is_left {
+            edges.push(Edge::new(bl_pt.clone(), p5.clone(), Move::None));
+        }
+        edges.push(Edge::new(p5.clone(), p6.clone(), Move::Up));
+        if is_top {
+            edges.push(Edge::new(p6.clone(), p0.clone(), Move::None));
+        }
+    }
+}
+
+// Case 33 (0201) - 7 point case
+#[allow(clippy::too_many_arguments)]
+fn saddle_33(
+    edges: &mut Vec<Edge>,
+    _tl_pt: &Point, _tr_pt: &Point, _br_pt: &Point, bl_pt: &Point,
+    tl_val: f64, tr_val: f64, br_val: f64, bl_val: f64,
+    lower: f64, upper: f64, _smoothing: f64,
+    is_top: bool, is_right: bool, is_bottom: bool, is_left: bool,
+    interp: &impl Fn(f64, Side) -> Point,
+) {
+    let average = (tl_val + tr_val + br_val + bl_val) / 4.0;
+
+    if average < lower || average >= upper {
+        let p0 = interp(upper, Side::Top);
+        let p1 = interp(upper, Side::Right);
+        let p2 = interp(lower, Side::Right);
+        let p3 = interp(lower, Side::Top);
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
+        if is_right {
+            edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
+        }
+        edges.push(Edge::new(p2.clone(), p3.clone(), Move::Up));
+        if is_top {
+            edges.push(Edge::new(p3.clone(), p0.clone(), Move::None));
+        }
+
+        let p4 = interp(lower, Side::Left);
+        let p5 = interp(lower, Side::Bottom);
+        edges.push(Edge::new(p4.clone(), p5.clone(), Move::Down));
+        if is_bottom {
+            edges.push(Edge::new(p5.clone(), bl_pt.clone(), Move::Left));
+        }
+        if is_left {
+            edges.push(Edge::new(bl_pt.clone(), p4.clone(), Move::None));
+        }
+    } else if average >= lower && average < upper {
+        let p0 = interp(upper, Side::Top);
+        let p1 = interp(upper, Side::Right);
+        let p2 = interp(lower, Side::Right);
+        let p3 = interp(lower, Side::Bottom);
+        let p5 = interp(lower, Side::Left);
+        let p6 = interp(lower, Side::Top);
+
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
+        if is_right {
+            edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
+        }
+        edges.push(Edge::new(p2.clone(), p3.clone(), Move::Down));
+        if is_bottom {
+            edges.push(Edge::new(p3.clone(), bl_pt.clone(), Move::Left));
+        }
+        if is_left {
+            edges.push(Edge::new(bl_pt.clone(), p5.clone(), Move::None));
+        }
+        edges.push(Edge::new(p5.clone(), p6.clone(), Move::Up));
+        if is_top {
+            edges.push(Edge::new(p6.clone(), p0.clone(), Move::None));
+        }
+    }
+}
+
+// Case 98 (1202) - 7 point case
+#[allow(clippy::too_many_arguments)]
+fn saddle_98(
+    edges: &mut Vec<Edge>,
+    tl_pt: &Point, _tr_pt: &Point, _br_pt: &Point, _bl_pt: &Point,
+    tl_val: f64, tr_val: f64, br_val: f64, bl_val: f64,
+    lower: f64, upper: f64, _smoothing: f64,
+    is_top: bool, is_right: bool, is_bottom: bool, is_left: bool,
+    interp: &impl Fn(f64, Side) -> Point,
+) {
+    let average = (tl_val + tr_val + br_val + bl_val) / 4.0;
+
+    if average < lower || average >= upper {
+        let p0 = interp(upper, Side::Top);
+        let p1 = interp(upper, Side::Left);
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Left));
+        if is_left {
+            edges.push(Edge::new(p1.clone(), tl_pt.clone(), Move::Up));
+        }
+        if is_top {
+            edges.push(Edge::new(tl_pt.clone(), p0.clone(), Move::None));
+        }
+
+        let p3 = interp(lower, Side::Right);
+        let p4 = interp(lower, Side::Bottom);
+        let p5 = interp(upper, Side::Bottom);
+        let p6 = interp(upper, Side::Right);
+        edges.push(Edge::new(p3.clone(), p4.clone(), Move::Down));
+        if is_bottom {
+            edges.push(Edge::new(p4.clone(), p5.clone(), Move::None));
+        }
+        edges.push(Edge::new(p5.clone(), p6.clone(), Move::Right));
+        if is_right {
+            edges.push(Edge::new(p6, p3, Move::None));
+        }
+    } else if average >= lower && average < upper {
+        let p0 = interp(upper, Side::Top);
+        let p1 = interp(upper, Side::Right);
+        let p2 = interp(lower, Side::Right);
+        let p3 = interp(lower, Side::Bottom);
+        let p4 = interp(upper, Side::Bottom);
+        let p5 = interp(upper, Side::Left);
+
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
+        if is_right {
+            edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
+        }
+        edges.push(Edge::new(p2.clone(), p3.clone(), Move::Down));
+        if is_bottom {
+            edges.push(Edge::new(p3.clone(), p4.clone(), Move::None));
+        }
+        edges.push(Edge::new(p4.clone(), p5.clone(), Move::Left));
+        if is_left {
+            edges.push(Edge::new(p5.clone(), tl_pt.clone(), Move::Up));
+        }
+        if is_top {
+            edges.push(Edge::new(tl_pt.clone(), p0.clone(), Move::None));
+        }
+    }
+}
+
+// Case 72 (1020) - 7 point case
+#[allow(clippy::too_many_arguments)]
+fn saddle_72(
+    edges: &mut Vec<Edge>,
+    tl_pt: &Point, _tr_pt: &Point, _br_pt: &Point, _bl_pt: &Point,
+    tl_val: f64, tr_val: f64, br_val: f64, bl_val: f64,
+    lower: f64, upper: f64, _smoothing: f64,
+    is_top: bool, is_right: bool, is_bottom: bool, is_left: bool,
+    interp: &impl Fn(f64, Side) -> Point,
+) {
+    let average = (tl_val + tr_val + br_val + bl_val) / 4.0;
+
+    if average < lower || average >= upper {
+        let p0 = interp(lower, Side::Top);
+        let p1 = interp(lower, Side::Left);
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Left));
+        if is_left {
+            edges.push(Edge::new(p1.clone(), tl_pt.clone(), Move::Up));
+        }
+        if is_top {
+            edges.push(Edge::new(tl_pt.clone(), p0.clone(), Move::None));
+        }
+
+        let p3 = interp(upper, Side::Right);
+        let p4 = interp(upper, Side::Bottom);
+        let p5 = interp(lower, Side::Bottom);
+        let p6 = interp(lower, Side::Right);
+        edges.push(Edge::new(p3.clone(), p4.clone(), Move::Down));
+        if is_bottom {
+            edges.push(Edge::new(p4.clone(), p5.clone(), Move::None));
+        }
+        edges.push(Edge::new(p5.clone(), p6.clone(), Move::Right));
+        if is_right {
+            edges.push(Edge::new(p6, p3, Move::None));
+        }
+    } else if average >= lower && average < upper {
+        let p0 = interp(lower, Side::Top);
+        let p1 = interp(lower, Side::Right);
+        let p2 = interp(upper, Side::Right);
+        let p3 = interp(upper, Side::Bottom);
+        let p4 = interp(lower, Side::Bottom);
+        let p5 = interp(lower, Side::Left);
+
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
+        if is_right {
+            edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
+        }
+        edges.push(Edge::new(p2.clone(), p3.clone(), Move::Down));
+        if is_bottom {
+            edges.push(Edge::new(p3.clone(), p4.clone(), Move::None));
+        }
+        edges.push(Edge::new(p4.clone(), p5.clone(), Move::Left));
+        if is_left {
+            edges.push(Edge::new(p5.clone(), tl_pt.clone(), Move::Up));
+        }
+        if is_top {
+            edges.push(Edge::new(tl_pt.clone(), p0.clone(), Move::None));
+        }
+    }
+}
+
+// Case 38 (0212) - 7 point case
+#[allow(clippy::too_many_arguments)]
+fn saddle_38(
+    edges: &mut Vec<Edge>,
+    _tl_pt: &Point, _tr_pt: &Point, br_pt: &Point, _bl_pt: &Point,
+    tl_val: f64, tr_val: f64, br_val: f64, bl_val: f64,
+    lower: f64, upper: f64, _smoothing: f64,
+    is_top: bool, is_right: bool, is_bottom: bool, is_left: bool,
+    interp: &impl Fn(f64, Side) -> Point,
+) {
+    let average = (tl_val + tr_val + br_val + bl_val) / 4.0;
+
+    if average < lower || average >= upper {
+        let p0 = interp(upper, Side::Top);
+        let p1 = interp(upper, Side::Left);
+        let p2 = interp(lower, Side::Left);
+        let p3 = interp(lower, Side::Top);
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Left));
+        if is_left {
+            edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
+        }
+        edges.push(Edge::new(p2.clone(), p3.clone(), Move::Up));
+        if is_top {
+            edges.push(Edge::new(p3.clone(), p0.clone(), Move::None));
+        }
+
+        let p4 = interp(upper, Side::Bottom);
+        let p5 = interp(upper, Side::Right);
+        edges.push(Edge::new(p4.clone(), p5.clone(), Move::Right));
+        if is_right {
+            edges.push(Edge::new(p5.clone(), br_pt.clone(), Move::Down));
+        }
+        if is_bottom {
+            edges.push(Edge::new(br_pt.clone(), p4.clone(), Move::None));
+        }
+    } else if average >= lower && average < upper {
+        let p0 = interp(upper, Side::Top);
+        let p1 = interp(upper, Side::Right);
+        let p3 = interp(upper, Side::Bottom);
+        let p4 = interp(upper, Side::Left);
+        let p5 = interp(lower, Side::Left);
+        let p6 = interp(lower, Side::Top);
+
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
+        if is_right {
+            edges.push(Edge::new(p1.clone(), br_pt.clone(), Move::Down));
+        }
+        if is_bottom {
+            edges.push(Edge::new(br_pt.clone(), p3.clone(), Move::None));
+        }
+        edges.push(Edge::new(p3.clone(), p4.clone(), Move::Left));
+        if is_left {
+            edges.push(Edge::new(p4.clone(), p5.clone(), Move::None));
+        }
+        edges.push(Edge::new(p5.clone(), p6.clone(), Move::Up));
+        if is_top {
+            edges.push(Edge::new(p6.clone(), p0.clone(), Move::None));
+        }
+    }
+}
+
+// Case 132 (2010) - 7 point case
+#[allow(clippy::too_many_arguments)]
+fn saddle_132(
+    edges: &mut Vec<Edge>,
+    _tl_pt: &Point, _tr_pt: &Point, br_pt: &Point, _bl_pt: &Point,
+    tl_val: f64, tr_val: f64, br_val: f64, bl_val: f64,
+    lower: f64, upper: f64, _smoothing: f64,
+    is_top: bool, is_right: bool, is_bottom: bool, is_left: bool,
+    interp: &impl Fn(f64, Side) -> Point,
+) {
+    let average = (tl_val + tr_val + br_val + bl_val) / 4.0;
+
+    if average < lower || average >= upper {
+        let p0 = interp(lower, Side::Top);
+        let p1 = interp(lower, Side::Left);
+        let p2 = interp(upper, Side::Left);
+        let p3 = interp(upper, Side::Top);
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Left));
+        if is_left {
+            edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
+        }
+        edges.push(Edge::new(p2.clone(), p3.clone(), Move::Up));
+        if is_top {
+            edges.push(Edge::new(p3.clone(), p0.clone(), Move::None));
+        }
+
+        let p4 = interp(lower, Side::Bottom);
+        let p5 = interp(lower, Side::Right);
+        edges.push(Edge::new(p4.clone(), p5.clone(), Move::Right));
+        if is_right {
+            edges.push(Edge::new(p5.clone(), br_pt.clone(), Move::Down));
+        }
+        if is_bottom {
+            edges.push(Edge::new(br_pt.clone(), p4.clone(), Move::None));
+        }
+    } else if average >= lower && average < upper {
+        let p0 = interp(lower, Side::Top);
+        let p1 = interp(lower, Side::Right);
+        let p3 = interp(lower, Side::Bottom);
+        let p4 = interp(lower, Side::Left);
+        let p5 = interp(upper, Side::Left);
+        let p6 = interp(upper, Side::Top);
+
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
+        if is_right {
+            edges.push(Edge::new(p1.clone(), br_pt.clone(), Move::Down));
+        }
+        if is_bottom {
+            edges.push(Edge::new(br_pt.clone(), p3.clone(), Move::None));
+        }
+        edges.push(Edge::new(p3.clone(), p4.clone(), Move::Left));
+        if is_left {
+            edges.push(Edge::new(p4.clone(), p5.clone(), Move::None));
+        }
+        edges.push(Edge::new(p5.clone(), p6.clone(), Move::Up));
+        if is_top {
+            edges.push(Edge::new(p6.clone(), p0.clone(), Move::None));
+        }
+    }
+}
+
+// ============================================================================
+// Square implementation (1 function)
+// ============================================================================
+
+// Case 85 (1111) - Full square
+#[allow(clippy::too_many_arguments)]
+fn square_85(
+    edges: &mut Vec<Edge>,
+    _tl_pt: &Point, _tr_pt: &Point, _br_pt: &Point, _bl_pt: &Point,
+    _tl_val: f64, _tr_val: f64, _br_val: f64, _bl_val: f64,
+    lower: f64, upper: f64, _smoothing: f64,
+    is_top: bool, is_right: bool, is_bottom: bool, is_left: bool,
+    interp: &impl Fn(f64, Side) -> Point,
+) {
+    let p0 = interp(upper, Side::Right);
+    let p1 = interp(upper, Side::Bottom);
+    let p2 = interp(upper, Side::Left);
+    let p3 = interp(upper, Side::Top);
+
+    if is_right {
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Down));
+    }
+    if is_bottom {
+        edges.push(Edge::new(p1.clone(), p2.clone(), Move::Left));
+    }
+    if is_left {
+        edges.push(Edge::new(p2.clone(), p3.clone(), Move::Up));
+    }
+    if is_top {
+        edges.push(Edge::new(p3, p0, Move::Right));
     }
 }
 
@@ -330,36 +2005,32 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_isoline_config() {
-        // All below
-        assert_eq!(calculate_isoline_config(5.0, 5.0, 5.0, 5.0, 10.0), 0);
+    fn test_empty_cells() {
+        let tl = GridPoint::new(0.0, 1.0, 0.0);
+        let tr = GridPoint::new(1.0, 1.0, 0.0);
+        let br = GridPoint::new(1.0, 0.0, 0.0);
+        let bl = GridPoint::new(0.0, 0.0, 0.0);
 
-        // All above
-        assert_eq!(calculate_isoline_config(15.0, 15.0, 15.0, 15.0, 10.0), 15);
+        // All below lower
+        let result = CellShape::from_config(0, &tl, &tr, &br, &bl, 5.0, 10.0, 0.999, false, false, false, false);
+        assert!(result.is_none());
 
-        // Bottom-left above
-        assert_eq!(calculate_isoline_config(5.0, 5.0, 5.0, 15.0, 10.0), 1);
-
-        // Top-left above
-        assert_eq!(calculate_isoline_config(15.0, 5.0, 5.0, 5.0, 10.0), 8);
+        // All above upper
+        let result = CellShape::from_config(170, &tl, &tr, &br, &bl, 5.0, 10.0, 0.999, false, false, false, false);
+        assert!(result.is_none());
     }
 
     #[test]
-    fn test_cell_shape_creation() {
-        let tl = GridPoint::new(-100.0, 41.0, 5.0);
-        let tr = GridPoint::new(-99.0, 41.0, 5.0);
-        let br = GridPoint::new(-99.0, 40.0, 15.0);
-        let bl = GridPoint::new(-100.0, 40.0, 15.0);
+    fn test_triangle_config() {
+        let tl = GridPoint::new(0.0, 1.0, 12.0);
+        let tr = GridPoint::new(1.0, 1.0, 12.0);
+        let br = GridPoint::new(1.0, 0.0, 12.0);
+        let bl = GridPoint::new(0.0, 0.0, 4.0);
 
-        let shape = CellShape::from_config(
-            1,  // config doesn't matter for current impl
-            &tl, &tr, &br, &bl,
-            10.0, 20.0, 0.999,
-            false, false, false, false,
-        );
-
-        assert!(shape.is_some());
-        let shape = shape.unwrap();
-        assert!(!shape.edges.is_empty());
+        // Config 169 (2221) - all above upper except BL between
+        let result = CellShape::from_config(169, &tl, &tr, &br, &bl, 5.0, 10.0, 0.999, false, false, false, false);
+        assert!(result.is_some());
+        let shape = result.unwrap();
+        assert!(shape.edges.len() > 0);
     }
 }
