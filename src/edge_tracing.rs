@@ -182,7 +182,18 @@ pub fn trace_ring(
         let matching_edges = next_cell.get_edges_from(&current_edge.end);
 
         if matching_edges.is_empty() {
-            // No matching edge found
+            // No matching edge found - LOG DIAGNOSTIC INFO
+            eprintln!("❌ EDGE MISMATCH at cell ({}, {})", current_row, current_col);
+            eprintln!("   Looking for edge starting at: ({:.6}, {:.6})", current_edge.end.x, current_edge.end.y);
+            eprintln!("   Available edges in cell:");
+            for (i, edge) in next_cell.shape.edges.iter().skip(next_cell.used_edges).enumerate() {
+                eprintln!("      Edge {}: start=({:.6}, {:.6}) end=({:.6}, {:.6})",
+                    i, edge.start.x, edge.start.y, edge.end.x, edge.end.y);
+                let dx = (edge.start.x - current_edge.end.x).abs();
+                let dy = (edge.start.y - current_edge.end.y).abs();
+                eprintln!("         Distance from target: dx={:.10}, dy={:.10}", dx, dy);
+            }
+            eprintln!("   EPSILON threshold: {:.10}", 1e-6);
             return None;
         }
 
@@ -197,6 +208,8 @@ pub fn trace_ring(
 /// Only returns rings with at least 3 points (valid polygons per GeoJSON spec)
 pub fn trace_all_rings(cells: &mut Vec<Vec<Option<CellWithEdges>>>) -> Vec<Vec<Point>> {
     let mut rings = Vec::new();
+    let mut failed_traces = 0;
+    let mut total_attempts = 0;
 
     let rows = cells.len();
     if rows == 0 {
@@ -208,16 +221,38 @@ pub fn trace_all_rings(cells: &mut Vec<Vec<Option<CellWithEdges>>>) -> Vec<Vec<P
     for row in 0..rows {
         for col in 0..cols {
             // Keep tracing from this cell until all its edges are used
-            while let Some(ring) = trace_ring(cells, row, col) {
-                // Only include rings with at least 3 points
-                // (GeoJSON requires at least 4 coordinates for a valid polygon ring,
-                // with the first and last being identical. Since we don't duplicate
-                // the closing point, we need at least 3 distinct points)
-                if ring.len() >= 3 {
-                    rings.push(ring);
+            loop {
+                total_attempts += 1;
+                match trace_ring(cells, row, col) {
+                    Some(ring) => {
+                        // Only include rings with at least 3 points
+                        // (GeoJSON requires at least 4 coordinates for a valid polygon ring,
+                        // with the first and last being identical. Since we don't duplicate
+                        // the closing point, we need at least 3 distinct points)
+                        if ring.len() >= 3 {
+                            rings.push(ring);
+                        }
+                    }
+                    None => {
+                        // Check if there are still edges in this cell
+                        if let Some(Some(cell)) = cells.get(row).and_then(|r| r.get(col)) {
+                            if !cell.is_cleared() && cell.used_edges < cell.shape.edges.len() {
+                                failed_traces += 1;
+                            }
+                        }
+                        break;
+                    }
                 }
             }
         }
+    }
+
+    eprintln!("\n📊 EDGE TRACING SUMMARY:");
+    eprintln!("   Total rings traced: {}", rings.len());
+    eprintln!("   Total trace attempts: {}", total_attempts);
+    eprintln!("   Failed traces (unconnected edges): {}", failed_traces);
+    if failed_traces > 0 {
+        eprintln!("   ⚠️  {} edges could not connect to neighboring cells", failed_traces);
     }
 
     rings
