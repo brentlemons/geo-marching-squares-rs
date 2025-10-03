@@ -121,8 +121,11 @@ pub fn trace_ring(
             return Some(points);
         }
 
-        // Add the end point (not the closing point since we checked above)
-        points.push(current_edge.end.clone());
+        // Add the end point only if it's not a duplicate of the last point
+        // (This can happen with Move::None edges in the same cell)
+        if points.is_empty() || !points_equal(points.last().unwrap(), &current_edge.end) {
+            points.push(current_edge.end.clone());
+        }
 
         // Mark this edge as used
         if let Some(Some(cell)) = cells.get_mut(current_row).and_then(|r| r.get_mut(current_col)) {
