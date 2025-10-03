@@ -19,6 +19,7 @@ thiserror = "1.0"
 
 # Performance dependencies
 rayon = { version = "1.8", optional = true }
+smallvec = "1.13"
 
 # Serialization
 serde = { version = "1.0", features = ["derive"] }
@@ -33,6 +34,6 @@ great-circle = []  # Enable true spherical interpolation
 approx = "0.5"
 criterion = { version = "0.5", features = ["html_reports"] }
 
-# [[bench]]
-# name = "marching_squares_bench"
-# harness = false
+[[bench]]
+name = "marching_squares_bench"
+harness = false

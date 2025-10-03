@@ -43,6 +43,7 @@ use std::f64::consts::PI;
 /// let result = interpolate_point(15.0, 10.0, 20.0, &p0, &p1, 0.999);
 /// // Result will be approximately halfway between p0 and p1
 /// ```
+#[inline]
 pub fn interpolate_point(
     level: f64,
     value0: f64,
@@ -83,6 +84,7 @@ pub fn interpolate_point(
 /// # Returns
 ///
 /// The interpolated point along the specified cell edge
+#[inline]
 pub fn interpolate_side(
     level: f64,
     side: Side,

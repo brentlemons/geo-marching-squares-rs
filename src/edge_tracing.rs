@@ -5,7 +5,7 @@
 
 use crate::cell_shapes::CellShape;
 use crate::types::{Edge, Point};
-use std::collections::HashMap;
+use smallvec::SmallVec;
 
 /// A cell in the grid with its edges
 #[derive(Debug, Clone)]
@@ -37,9 +37,10 @@ impl CellWithEdges {
     }
 
     /// Get edges that start from a given point
-    pub fn get_edges_from(&self, start_point: &Point) -> Vec<&Edge> {
+    /// Uses SmallVec to avoid heap allocation for typical case (1-2 edges)
+    pub fn get_edges_from(&self, start_point: &Point) -> SmallVec<[&Edge; 4]> {
         if self.cleared {
-            return Vec::new();
+            return SmallVec::new();
         }
 
         self.shape
@@ -91,7 +92,8 @@ pub fn trace_ring(
     let first_edge = start_cell.get_first_edge()?.clone();
     let start_point = first_edge.start.clone();
 
-    let mut points = Vec::new();
+    // Pre-allocate with estimated capacity (typical rings have 20-50 points)
+    let mut points = Vec::with_capacity(32);
     points.push(start_point.clone());
 
     let mut current_row = start_row;

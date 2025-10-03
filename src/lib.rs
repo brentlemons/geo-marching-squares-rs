@@ -50,6 +50,7 @@ mod error;
 mod grid;
 mod marching_squares;
 mod polygon_util;
+mod simd_ops;
 mod types;
 
 pub mod interpolation;
