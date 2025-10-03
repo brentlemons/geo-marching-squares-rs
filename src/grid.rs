@@ -260,34 +260,52 @@ impl GeoGrid {
     ///
     /// Returns (min_lon, min_lat, max_lon, max_lat)
     pub fn bounds(&self) -> (f64, f64, f64, f64) {
-        let mut min_lon = f64::INFINITY;
-        let mut min_lat = f64::INFINITY;
-        let mut max_lon = f64::NEG_INFINITY;
-        let mut max_lat = f64::NEG_INFINITY;
-
-        for point in self.iter() {
-            min_lon = min_lon.min(point.lon);
-            min_lat = min_lat.min(point.lat);
-            max_lon = max_lon.max(point.lon);
-            max_lat = max_lat.max(point.lat);
-        }
-
-        (min_lon, min_lat, max_lon, max_lat)
+        self.iter().fold(
+            (f64::INFINITY, f64::INFINITY, f64::NEG_INFINITY, f64::NEG_INFINITY),
+            |(min_lon, min_lat, max_lon, max_lat), point| {
+                (
+                    min_lon.min(point.lon),
+                    min_lat.min(point.lat),
+                    max_lon.max(point.lon),
+                    max_lat.max(point.lat),
+                )
+            },
+        )
     }
 
     /// Get the value range in the grid
     ///
     /// Returns (min_value, max_value)
     pub fn value_range(&self) -> (f32, f32) {
-        let mut min_val = f32::INFINITY;
-        let mut max_val = f32::NEG_INFINITY;
+        self.iter().fold(
+            (f32::INFINITY, f32::NEG_INFINITY),
+            |(min_val, max_val), point| {
+                (min_val.min(point.value), max_val.max(point.value))
+            },
+        )
+    }
+}
 
-        for point in self.iter() {
-            min_val = min_val.min(point.value);
-            max_val = max_val.max(point.value);
-        }
+/// Implement IntoIterator for GeoGrid references
+impl<'a> IntoIterator for &'a GeoGrid {
+    type Item = &'a GridPoint;
+    type IntoIter = std::iter::FlatMap<
+        std::slice::Iter<'a, Vec<GridPoint>>,
+        std::slice::Iter<'a, GridPoint>,
+        fn(&'a Vec<GridPoint>) -> std::slice::Iter<'a, GridPoint>,
+    >;
 
-        (min_val, max_val)
+    fn into_iter(self) -> Self::IntoIter {
+        self.points.iter().flat_map(|row| row.iter())
+    }
+}
+
+/// Implement TryFrom for creating GeoGrid from Vec<Vec<GridPoint>>
+impl TryFrom<Vec<Vec<GridPoint>>> for GeoGrid {
+    type Error = Error;
+
+    fn try_from(points: Vec<Vec<GridPoint>>) -> Result<Self> {
+        Self::from_points(points)
     }
 }
 

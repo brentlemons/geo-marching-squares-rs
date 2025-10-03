@@ -183,7 +183,7 @@ fn test_custom_config() {
     let mut grid = GeoGrid::from_points(points).expect("Failed to create grid");
 
     // Modify smoothing factor
-    grid.config_mut().smoothing_factor = 0.95;
+    grid.config_mut().smoothing_factor = 0.95.into();
 
     let isobands = grid.isobands(&[12.0, 18.0, 22.0]).expect("Failed with custom config");
     assert_eq!(isobands.len(), 2);

@@ -8,15 +8,24 @@
 
 use crate::interpolation::interpolate_with_method;
 use crate::types::{Edge, GridPoint, InterpolationMethod, Move, Point, Side};
+use std::fmt;
 
 /// Cell configuration value (0-170 for 3-level encoding)
 pub type CellConfig = u8;
 
 /// Represents the edges for a marching squares cell
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct CellShape {
     /// List of edges in this cell (start point, end point, move direction)
     pub edges: Vec<Edge>,
+}
+
+impl fmt::Debug for CellShape {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("CellShape")
+            .field("edge_count", &self.edges.len())
+            .finish_non_exhaustive()
+    }
 }
 
 impl CellShape {

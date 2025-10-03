@@ -36,12 +36,12 @@ pub struct Point {
 
 impl Point {
     /// Create a new point
-    pub fn new(x: f64, y: f64) -> Self {
+    pub const fn new(x: f64, y: f64) -> Self {
         Self { x, y }
     }
 
     /// Create a point from longitude and latitude
-    pub fn from_lon_lat(lon: f64, lat: f64) -> Self {
+    pub const fn from_lon_lat(lon: f64, lat: f64) -> Self {
         Self { x: lon, y: lat }
     }
 
@@ -67,6 +67,7 @@ impl From<GridPoint> for Point {
 
 /// Interpolation method for contour generation
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
 pub enum InterpolationMethod {
     /// Cosine interpolation with center bias (default, fast and accurate for typical grids)
     Cosine,
@@ -125,12 +126,49 @@ pub struct Edge {
 
 impl Edge {
     /// Create a new edge
-    pub fn new(start: Point, end: Point, move_dir: Move) -> Self {
+    pub const fn new(start: Point, end: Point, move_dir: Move) -> Self {
         Self {
             start,
             end,
             move_dir,
         }
+    }
+}
+
+/// Smoothing factor for interpolation (0.0 to 1.0)
+///
+/// This newtype ensures that smoothing factors are within the valid range.
+/// Typical values are close to 1.0 (e.g., 0.999) for smooth contours.
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Serialize, Deserialize)]
+pub struct SmoothingFactor(f64);
+
+impl SmoothingFactor {
+    /// Create a new smoothing factor, clamping to valid range [0.0, 1.0]
+    pub fn new(value: f64) -> Self {
+        Self(value.clamp(0.0, 1.0))
+    }
+
+    /// Get the raw value
+    pub fn get(self) -> f64 {
+        self.0
+    }
+}
+
+impl Default for SmoothingFactor {
+    fn default() -> Self {
+        Self(0.999)
+    }
+}
+
+impl From<f64> for SmoothingFactor {
+    fn from(value: f64) -> Self {
+        Self::new(value)
+    }
+}
+
+impl From<SmoothingFactor> for f64 {
+    fn from(sf: SmoothingFactor) -> f64 {
+        sf.0
     }
 }
 
@@ -142,7 +180,7 @@ pub struct MarchingSquaresConfig {
     /// Interpolation method to use
     pub interpolation_method: InterpolationMethod,
     /// Smoothing factor for interpolation (0.0 to 1.0, typically 0.999)
-    pub smoothing_factor: f64,
+    pub smoothing_factor: SmoothingFactor,
 }
 
 impl Default for MarchingSquaresConfig {
@@ -150,12 +188,17 @@ impl Default for MarchingSquaresConfig {
         Self {
             use_parallel: cfg!(feature = "parallel"),
             interpolation_method: InterpolationMethod::Cosine,
-            smoothing_factor: 0.999,
+            smoothing_factor: SmoothingFactor::default(),
         }
     }
 }
 
 impl MarchingSquaresConfig {
+    /// Create a new config builder with default settings
+    pub fn builder() -> MarchingSquaresConfigBuilder {
+        MarchingSquaresConfigBuilder::default()
+    }
+
     /// Create a new config with great circle interpolation
     ///
     /// Note: Great circle interpolation is more accurate for large distances
@@ -171,5 +214,48 @@ impl MarchingSquaresConfig {
     /// Create a new config with cosine interpolation (default)
     pub fn with_cosine() -> Self {
         Self::default()
+    }
+}
+
+/// Builder for MarchingSquaresConfig with fluent API
+#[derive(Debug, Default)]
+pub struct MarchingSquaresConfigBuilder {
+    use_parallel: Option<bool>,
+    interpolation_method: Option<InterpolationMethod>,
+    smoothing_factor: Option<SmoothingFactor>,
+}
+
+impl MarchingSquaresConfigBuilder {
+    /// Create a new builder with default settings
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Set whether to use parallel processing
+    pub fn with_parallel(mut self, enabled: bool) -> Self {
+        self.use_parallel = Some(enabled);
+        self
+    }
+
+    /// Set the interpolation method
+    pub fn with_interpolation(mut self, method: InterpolationMethod) -> Self {
+        self.interpolation_method = Some(method);
+        self
+    }
+
+    /// Set the smoothing factor
+    pub fn with_smoothing(mut self, factor: impl Into<SmoothingFactor>) -> Self {
+        self.smoothing_factor = Some(factor.into());
+        self
+    }
+
+    /// Build the configuration
+    pub fn build(self) -> MarchingSquaresConfig {
+        let defaults = MarchingSquaresConfig::default();
+        MarchingSquaresConfig {
+            use_parallel: self.use_parallel.unwrap_or(defaults.use_parallel),
+            interpolation_method: self.interpolation_method.unwrap_or(defaults.interpolation_method),
+            smoothing_factor: self.smoothing_factor.unwrap_or(defaults.smoothing_factor),
+        }
     }
 }

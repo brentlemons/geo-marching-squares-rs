@@ -108,7 +108,7 @@ fn process_band(grid: &GeoGrid, lower: f64, upper: f64) -> Result<Option<Feature
                 bl,
                 lower,
                 upper,
-                grid.config().smoothing_factor,
+                grid.config().smoothing_factor.into(),
             ) {
                 // Convert edges to polygon format
                 for edge_list in edges {
@@ -198,7 +198,7 @@ fn process_isoline(grid: &GeoGrid, level: f64) -> Result<Option<Feature>> {
                 br,
                 bl,
                 level,
-                grid.config().smoothing_factor,
+                grid.config().smoothing_factor.into(),
             ) {
                 for segment in segments {
                     let line: Vec<Vec<f64>> = segment
@@ -703,7 +703,7 @@ pub fn generate_isobands_phase2(grid: &GeoGrid, lower: f64, upper: f64) -> Resul
                 bl,
                 lower,
                 upper,
-                grid.config().smoothing_factor,
+                grid.config().smoothing_factor.into(),
                 grid.config().interpolation_method,
                 row == 0,
                 col + 1 == cols - 1,
