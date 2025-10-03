@@ -57,7 +57,7 @@ pub mod interpolation;
 
 pub use error::{Error, Result};
 pub use grid::GeoGrid;
-pub use types::{Edge, GridPoint, Move, Point, Side};
+pub use types::{Edge, GridPoint, InterpolationMethod, MarchingSquaresConfig, Move, Point, Side};
 
 // Re-export commonly used types
 pub use geojson::{Feature, FeatureCollection};

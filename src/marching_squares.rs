@@ -704,6 +704,7 @@ pub fn generate_isobands_phase2(grid: &GeoGrid, lower: f64, upper: f64) -> Resul
                 lower,
                 upper,
                 grid.config().smoothing_factor,
+                grid.config().interpolation_method,
                 row == 0,
                 col + 1 == cols - 1,
                 row + 1 == rows - 1,

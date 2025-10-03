@@ -65,6 +65,21 @@ impl From<GridPoint> for Point {
     }
 }
 
+/// Interpolation method for contour generation
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum InterpolationMethod {
+    /// Cosine interpolation with center bias (default, fast and accurate for typical grids)
+    Cosine,
+    /// Great circle (spherical) interpolation (more accurate for large distances, slower)
+    GreatCircle,
+}
+
+impl Default for InterpolationMethod {
+    fn default() -> Self {
+        Self::Cosine
+    }
+}
+
 /// Represents a side of a grid cell for marching squares algorithm
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Side {
@@ -124,9 +139,9 @@ impl Edge {
 pub struct MarchingSquaresConfig {
     /// Whether to use parallel processing (requires 'parallel' feature)
     pub use_parallel: bool,
-    /// Whether to use great circle interpolation (requires 'great-circle' feature)
-    pub use_great_circle: bool,
-    /// Smoothing factor for cosine interpolation (0.0 to 1.0)
+    /// Interpolation method to use
+    pub interpolation_method: InterpolationMethod,
+    /// Smoothing factor for interpolation (0.0 to 1.0, typically 0.999)
     pub smoothing_factor: f64,
 }
 
@@ -134,8 +149,27 @@ impl Default for MarchingSquaresConfig {
     fn default() -> Self {
         Self {
             use_parallel: cfg!(feature = "parallel"),
-            use_great_circle: cfg!(feature = "great-circle"),
+            interpolation_method: InterpolationMethod::Cosine,
             smoothing_factor: 0.999,
         }
+    }
+}
+
+impl MarchingSquaresConfig {
+    /// Create a new config with great circle interpolation
+    ///
+    /// Note: Great circle interpolation is more accurate for large distances
+    /// but significantly slower. Use only when grid spacing is very large
+    /// (>100km) or for polar regions.
+    pub fn with_great_circle() -> Self {
+        Self {
+            interpolation_method: InterpolationMethod::GreatCircle,
+            ..Default::default()
+        }
+    }
+
+    /// Create a new config with cosine interpolation (default)
+    pub fn with_cosine() -> Self {
+        Self::default()
     }
 }

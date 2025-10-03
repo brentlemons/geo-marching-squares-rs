@@ -28,7 +28,6 @@ serde_json = "1.0"
 [features]
 default = ["parallel"]
 parallel = ["rayon"]
-great-circle = []  # Enable true spherical interpolation
 
 [dev-dependencies]
 approx = "0.5"

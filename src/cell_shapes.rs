@@ -6,8 +6,8 @@
 //! Configuration encoding: TL(0/64/128) | TR(0/16/32) | BR(0/4/8) | BL(0/1/2)
 //! This creates 81 possible configurations mapped to values 0-170.
 
-use crate::interpolation::interpolate_point;
-use crate::types::{Edge, GridPoint, Move, Point, Side};
+use crate::interpolation::interpolate_with_method;
+use crate::types::{Edge, GridPoint, InterpolationMethod, Move, Point, Side};
 
 /// Cell configuration value (0-170 for 3-level encoding)
 pub type CellConfig = u8;
@@ -35,6 +35,7 @@ impl CellShape {
         lower: f64,
         upper: f64,
         smoothing: f64,
+        interpolation_method: InterpolationMethod,
         is_top_edge: bool,
         is_right_edge: bool,
         is_bottom_edge: bool,
@@ -56,13 +57,13 @@ impl CellShape {
         let br_val = br.value as f64;
         let bl_val = bl.value as f64;
 
-        // Helper function to interpolate on a side
+        // Helper function to interpolate on a side using the selected method
         let interp = |level: f64, side: Side| -> Point {
             match side {
-                Side::Top => interpolate_point(level, tl_val, tr_val, &tl_pt, &tr_pt, smoothing),
-                Side::Right => interpolate_point(level, tr_val, br_val, &tr_pt, &br_pt, smoothing),
-                Side::Bottom => interpolate_point(level, bl_val, br_val, &bl_pt, &br_pt, smoothing),
-                Side::Left => interpolate_point(level, tl_val, bl_val, &tl_pt, &bl_pt, smoothing),
+                Side::Top => interpolate_with_method(interpolation_method, level, tl_val, tr_val, &tl_pt, &tr_pt, smoothing),
+                Side::Right => interpolate_with_method(interpolation_method, level, tr_val, br_val, &tr_pt, &br_pt, smoothing),
+                Side::Bottom => interpolate_with_method(interpolation_method, level, bl_val, br_val, &bl_pt, &br_pt, smoothing),
+                Side::Left => interpolate_with_method(interpolation_method, level, tl_val, bl_val, &tl_pt, &bl_pt, smoothing),
             }
         };
 
@@ -2012,11 +2013,11 @@ mod tests {
         let bl = GridPoint::new(0.0, 0.0, 0.0);
 
         // All below lower
-        let result = CellShape::from_config(0, &tl, &tr, &br, &bl, 5.0, 10.0, 0.999, false, false, false, false);
+        let result = CellShape::from_config(0, &tl, &tr, &br, &bl, 5.0, 10.0, 0.999, InterpolationMethod::Cosine, false, false, false, false);
         assert!(result.is_none());
 
         // All above upper
-        let result = CellShape::from_config(170, &tl, &tr, &br, &bl, 5.0, 10.0, 0.999, false, false, false, false);
+        let result = CellShape::from_config(170, &tl, &tr, &br, &bl, 5.0, 10.0, 0.999, InterpolationMethod::Cosine, false, false, false, false);
         assert!(result.is_none());
     }
 
@@ -2028,7 +2029,7 @@ mod tests {
         let bl = GridPoint::new(0.0, 0.0, 4.0);
 
         // Config 169 (2221) - all above upper except BL between
-        let result = CellShape::from_config(169, &tl, &tr, &br, &bl, 5.0, 10.0, 0.999, false, false, false, false);
+        let result = CellShape::from_config(169, &tl, &tr, &br, &bl, 5.0, 10.0, 0.999, InterpolationMethod::Cosine, false, false, false, false);
         assert!(result.is_some());
         let shape = result.unwrap();
         assert!(shape.edges.len() > 0);

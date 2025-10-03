@@ -1,10 +1,12 @@
 //! Interpolation functions for marching squares algorithm
 //!
-//! This module provides cosine interpolation with center bias, ported from the proven
-//! Java implementation. The interpolation handles smooth contour generation in geographic
-//! space without requiring expensive great circle calculations.
+//! This module provides multiple interpolation methods:
+//! - **Cosine interpolation** (default): Fast and accurate for typical grid spacings (3-10km)
+//! - **Great circle interpolation**: More accurate for large distances or polar regions
+//!
+//! The cosine method is ported from the proven Java implementation.
 
-use crate::types::{Point, Side};
+use crate::types::{InterpolationMethod, Point, Side};
 use std::f64::consts::PI;
 
 /// Interpolates a point along a cell edge using cosine interpolation with center bias.
@@ -130,12 +132,13 @@ pub fn interpolate_side(
     }
 }
 
-#[cfg(feature = "great-circle")]
-/// Interpolates using spherical (great circle) calculations.
+/// Dispatches to the appropriate interpolation method
 ///
-/// This is more accurate for very large distances but also more expensive.
-/// Requires the `great-circle` feature.
-pub fn interpolate_point_spherical(
+/// This is the main entry point for interpolation. It selects between
+/// cosine and great circle interpolation based on the method parameter.
+#[inline]
+pub fn interpolate_with_method(
+    method: InterpolationMethod,
     level: f64,
     value0: f64,
     value1: f64,
@@ -143,8 +146,29 @@ pub fn interpolate_point_spherical(
     point1: &Point,
     smoothing_factor: f64,
 ) -> Point {
-    use geo_types::{Coord, Point as GeoPoint};
+    match method {
+        InterpolationMethod::Cosine => {
+            interpolate_point(level, value0, value1, point0, point1, smoothing_factor)
+        }
+        InterpolationMethod::GreatCircle => {
+            interpolate_point_great_circle(level, value0, value1, point0, point1, smoothing_factor)
+        }
+    }
+}
 
+/// Interpolates using spherical (great circle) calculations.
+///
+/// This is more accurate for very large distances but also more expensive.
+/// Use only when grid spacing is very large (>100km) or for polar regions.
+#[inline]
+pub fn interpolate_point_great_circle(
+    level: f64,
+    value0: f64,
+    value1: f64,
+    point0: &Point,
+    point1: &Point,
+    smoothing_factor: f64,
+) -> Point {
     // Linear interpolation factor
     let mu = (level - value0) / (value1 - value0);
 
@@ -155,11 +179,7 @@ pub fn interpolate_point_spherical(
     let center_diff = (mu2 - 0.5) * smoothing_factor;
     let new_mu = 0.5 + center_diff;
 
-    // Spherical interpolation
-    let p0 = Coord { x: point0.x, y: point0.y };
-    let p1 = Coord { x: point1.x, y: point1.y };
-
-    // Convert to radians
+    // Convert to radians for spherical interpolation
     let lon0 = point0.x.to_radians();
     let lat0 = point0.y.to_radians();
     let lon1 = point1.x.to_radians();
@@ -237,5 +257,67 @@ mod tests {
         // Should be on the top edge (y = 41.0) between tl and tr
         assert!((result.y - 41.0).abs() < 0.01);
         assert!(result.x > -100.0 && result.x < -99.0);
+    }
+
+    #[test]
+    fn test_interpolate_great_circle() {
+        let p0 = Point::new(-100.0, 40.0);
+        let p1 = Point::new(-99.0, 40.0);
+
+        // Interpolate at midpoint
+        let result = interpolate_point_great_circle(15.0, 10.0, 20.0, &p0, &p1, 0.999);
+
+        // Should be close to midpoint (great circle and linear are similar for small distances)
+        assert!((result.x - (-99.5)).abs() < 0.1);
+        assert!((result.y - 40.0).abs() < 0.1);
+    }
+
+    #[test]
+    fn test_interpolate_with_method_cosine() {
+        let p0 = Point::new(-100.0, 40.0);
+        let p1 = Point::new(-99.0, 40.0);
+
+        let result = interpolate_with_method(
+            InterpolationMethod::Cosine,
+            15.0, 10.0, 20.0, &p0, &p1, 0.999
+        );
+
+        // Should match direct cosine interpolation
+        let direct = interpolate_point(15.0, 10.0, 20.0, &p0, &p1, 0.999);
+        assert!((result.x - direct.x).abs() < 1e-10);
+        assert!((result.y - direct.y).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_interpolate_with_method_great_circle() {
+        let p0 = Point::new(-100.0, 40.0);
+        let p1 = Point::new(-99.0, 40.0);
+
+        let result = interpolate_with_method(
+            InterpolationMethod::GreatCircle,
+            15.0, 10.0, 20.0, &p0, &p1, 0.999
+        );
+
+        // Should match direct great circle interpolation
+        let direct = interpolate_point_great_circle(15.0, 10.0, 20.0, &p0, &p1, 0.999);
+        assert!((result.x - direct.x).abs() < 1e-10);
+        assert!((result.y - direct.y).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_cosine_vs_great_circle_small_distance() {
+        // For small distances (typical grid spacing), both should be very similar
+        let p0 = Point::new(-100.0, 40.0);
+        let p1 = Point::new(-99.9, 40.0); // 0.1 degree ~= 11km at this latitude
+
+        let cosine_result = interpolate_point(15.0, 10.0, 20.0, &p0, &p1, 0.999);
+        let gc_result = interpolate_point_great_circle(15.0, 10.0, 20.0, &p0, &p1, 0.999);
+
+        // Difference should be less than 1 meter for small distances
+        let diff_x = (cosine_result.x - gc_result.x).abs();
+        let diff_y = (cosine_result.y - gc_result.y).abs();
+
+        assert!(diff_x < 0.0001); // Less than ~10m
+        assert!(diff_y < 0.0001);
     }
 }
