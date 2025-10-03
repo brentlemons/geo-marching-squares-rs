@@ -68,7 +68,8 @@ pub fn interpolate_point(
     let x = (1.0 - new_mu) * point0.x + new_mu * point1.x;
     let y = (1.0 - new_mu) * point0.y + new_mu * point1.y;
 
-    Point::new(x, y)
+    // Round coordinates for consistency in edge tracing
+    Point::from_lon_lat(x, y)
 }
 
 /// Interpolates a point along a specific side of a grid cell.
@@ -200,7 +201,8 @@ pub fn interpolate_point_great_circle(
     let lat = z.atan2((x * x + y * y).sqrt());
     let lon = y.atan2(x);
 
-    Point::new(lon.to_degrees(), lat.to_degrees())
+    // Round coordinates for consistency in edge tracing
+    Point::from_lon_lat(lon.to_degrees(), lat.to_degrees())
 }
 
 #[cfg(test)]
