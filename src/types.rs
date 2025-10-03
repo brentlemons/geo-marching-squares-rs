@@ -2,6 +2,12 @@
 
 use serde::{Deserialize, Serialize};
 
+/// Round coordinate to 6 decimal places (~111mm precision at equator)
+/// This helps edge tracing by ensuring consistent coordinate values
+fn round_coordinate(coord: f64) -> f64 {
+    (coord * 1_000_000.0).round() / 1_000_000.0
+}
+
 /// A point with geographic coordinates and a data value
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct GridPoint {
@@ -40,9 +46,13 @@ impl Point {
         Self { x, y }
     }
 
-    /// Create a point from longitude and latitude
-    pub const fn from_lon_lat(lon: f64, lat: f64) -> Self {
-        Self { x: lon, y: lat }
+    /// Create a point from longitude and latitude with coordinate rounding
+    /// Rounds to 6 decimal places (~111mm precision at equator)
+    pub fn from_lon_lat(lon: f64, lat: f64) -> Self {
+        Self {
+            x: round_coordinate(lon),
+            y: round_coordinate(lat),
+        }
     }
 
     /// Get longitude (assuming this point represents geographic coordinates)
