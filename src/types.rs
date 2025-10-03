@@ -1,6 +1,7 @@
 //! Core data types for geographic marching squares
 
 use serde::{Deserialize, Serialize};
+use std::hash::{Hash, Hasher};
 
 /// Round coordinate to 6 decimal places (~111mm precision at equator)
 /// This helps edge tracing by ensuring consistent coordinate values
@@ -35,7 +36,7 @@ impl GridPoint {
 }
 
 /// A simple 2D point for geometric calculations
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct Point {
     /// X coordinate (longitude for geographic data)
     pub x: f64,
@@ -78,6 +79,29 @@ impl From<GridPoint> for Point {
         }
     }
 }
+
+// Implement Hash and Eq for Point to enable HashMap usage
+// We round to 6 decimal places (matching GeoJSON output precision) to ensure
+// that points which are "equal" within epsilon hash to the same value
+impl Hash for Point {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        // Round to 6 decimals to match GeoJSON output precision
+        // This ensures points that are "equal" hash the same
+        let x_rounded = (self.x * 1_000_000.0).round() as i64;
+        let y_rounded = (self.y * 1_000_000.0).round() as i64;
+        x_rounded.hash(state);
+        y_rounded.hash(state);
+    }
+}
+
+impl PartialEq for Point {
+    fn eq(&self, other: &Self) -> bool {
+        const EPSILON: f64 = 1e-6;
+        (self.x - other.x).abs() < EPSILON && (self.y - other.y).abs() < EPSILON
+    }
+}
+
+impl Eq for Point {}
 
 /// Interpolation method for contour generation
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

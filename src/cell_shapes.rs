@@ -8,6 +8,7 @@
 
 use crate::interpolation::interpolate_with_method;
 use crate::types::{Edge, GridPoint, InterpolationMethod, Move, Point, Side};
+use std::collections::HashMap;
 use std::fmt;
 
 /// Cell configuration value (0-170 for 3-level encoding)
@@ -16,8 +17,8 @@ pub type CellConfig = u8;
 /// Represents the edges for a marching squares cell
 #[derive(Clone)]
 pub struct CellShape {
-    /// List of edges in this cell (start point, end point, move direction)
-    pub edges: Vec<Edge>,
+    /// Edges in this cell, keyed by start point (matches Java HashMap implementation)
+    pub edges: HashMap<Point, Edge>,
 }
 
 impl fmt::Debug for CellShape {
@@ -30,7 +31,17 @@ impl fmt::Debug for CellShape {
 
 impl CellShape {
     /// Create a cell shape directly from edges (for testing)
+    /// Converts Vec<Edge> to HashMap<Point, Edge> keyed by start point
     pub fn new(edges: Vec<Edge>) -> Self {
+        let mut edge_map = HashMap::new();
+        for edge in edges {
+            edge_map.insert(edge.start, edge);
+        }
+        Self { edges: edge_map }
+    }
+
+    /// Create a cell shape directly from a HashMap (for direct construction)
+    pub fn new_from_map(edges: HashMap<Point, Edge>) -> Self {
         Self { edges }
     }
 
@@ -220,7 +231,7 @@ impl CellShape {
         if edges.is_empty() {
             None
         } else {
-            Some(Self { edges })
+            Some(Self::new(edges))
         }
     }
 }

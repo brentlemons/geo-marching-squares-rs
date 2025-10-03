@@ -5,7 +5,6 @@
 
 use crate::cell_shapes::CellShape;
 use crate::types::{Edge, Point};
-use smallvec::SmallVec;
 
 /// A cell in the grid with its edges
 #[derive(Debug, Clone)]
@@ -28,95 +27,62 @@ impl CellWithEdges {
         }
     }
 
-    /// Get the first available edge, if any
-    pub fn get_first_edge(&self) -> Option<&Edge> {
-        if self.cleared || self.used_edges >= self.shape.edges.len() {
-            return None;
-        }
-        self.shape.edges.get(self.used_edges)
-    }
-
-    /// Get edges that start from a given point
-    /// Uses SmallVec to avoid heap allocation for typical case (1-2 edges)
-    pub fn get_edges_from(&self, start_point: &Point) -> SmallVec<[&Edge; 4]> {
-        if self.cleared {
-            return SmallVec::new();
-        }
-
-        self.shape
-            .edges
-            .iter()
-            .skip(self.used_edges)
-            .filter(|edge| points_equal(&edge.start, start_point))
-            .collect()
-    }
-
     /// Get chained edges starting from a given point (Java-style)
     ///
-    /// This follows the Java getEdges() logic:
-    /// 1. Start with the given point (or first available if None)
-    /// 2. Find edge starting at that point
-    /// 3. Use edge's end point to find next edge
-    /// 4. Repeat until no more edges found
-    ///
-    /// Returns a list of edges that form a continuous chain within this cell.
+    /// Matches Java's getEdges(Point start, Edge.Move prevMove) behavior:
+    /// 1. If start is None, find first available edge
+    /// 2. Follow chain: edge.end becomes next search point
+    /// 3. Return all edges in the chain
     pub fn get_chained_edges_from(&self, start_point: Option<&Point>) -> Vec<Edge> {
-        if self.cleared || self.used_edges >= self.shape.edges.len() {
-            return Vec::new();
-        }
-
-        let available_edges: Vec<&Edge> = self.shape.edges.iter().skip(self.used_edges).collect();
-
-        if available_edges.is_empty() {
+        if self.cleared || self.shape.edges.is_empty() {
             return Vec::new();
         }
 
         // Find starting point
         let mut current_start = if let Some(pt) = start_point {
-            pt.clone()
+            *pt
         } else {
-            // No start point provided - use first available edge's start
-            available_edges[0].start.clone()
+            // No start point - use first available edge's start
+            // Java iterates through points list to find first edge in HashMap
+            match self.shape.edges.keys().next() {
+                Some(pt) => *pt,
+                None => return Vec::new(),
+            }
         };
 
         let mut result = Vec::new();
-        let mut used_indices = std::collections::HashSet::new();
+        let max_edges = self.shape.edges.len();
 
         // Follow the chain of edges within this cell
-        // Stop when we've checked all edges or can't find a continuation
-        while used_indices.len() < available_edges.len() {
-            // Find an unused edge that starts at current_start
-            let next_edge_opt = available_edges
-                .iter()
-                .enumerate()
-                .find(|(idx, edge)| {
-                    !used_indices.contains(idx) && points_equal(&edge.start, &current_start)
-                });
-
-            match next_edge_opt {
-                Some((idx, edge)) => {
-                    result.push((*edge).clone());
-                    used_indices.insert(idx);
-                    current_start = edge.end.clone();
-                }
-                None => break, // No more edges in chain
+        // Java: while (this.edges.containsKey(start) && edges.size() < this.edges.size())
+        while result.len() < max_edges {
+            if let Some(edge) = self.shape.edges.get(&current_start) {
+                result.push(edge.clone());
+                current_start = edge.end;
+            } else {
+                break; // No more edges in chain
             }
         }
 
         result
     }
 
-    /// Mark edges as used
-    pub fn mark_edges_used(&mut self, count: usize) {
+    /// Remove an edge by its start point (matches Java removeEdge)
+    pub fn remove_edge(&mut self, start_point: &Point) {
+        self.shape.edges.remove(start_point);
+    }
+
+    /// Increment used edge counter and check if cleared
+    pub fn increment_used_edges(&mut self, count: usize) {
         self.used_edges += count;
-        if self.used_edges >= self.shape.edges.len() {
+        if self.shape.edges.is_empty() {
             self.cleared = true;
         }
     }
 
     /// Check if this cell is cleared
     pub fn is_cleared(&self) -> bool {
-        self.cleared
+        self.cleared || self.shape.edges.is_empty()
     }
 }
 
@@ -171,9 +137,12 @@ pub fn trace_ring(
     let mut iterations = 0;
     const MAX_ITERATIONS: usize = 10000;
 
-    // Mark initial edges as used
+    // Mark initial edges as used AND REMOVE THEM (matches Java lines 75-78)
     if let Some(Some(cell)) = cells.get_mut(current_row).and_then(|r| r.get_mut(current_col)) {
-        cell.mark_edges_used(current_edges.len());
+        cell.increment_used_edges(current_edges.len());
+        for edge in &current_edges {
+            cell.remove_edge(&edge.start); // NEW: Actual removal
+        }
     }
 
     loop {
@@ -235,9 +204,12 @@ pub fn trace_ring(
             return None;
         }
 
-        // Mark edges as used
+        // Mark edges as used AND REMOVE THEM (matches Java lines 75-78)
         if let Some(Some(cell)) = cells.get_mut(current_row).and_then(|r| r.get_mut(current_col)) {
-            cell.mark_edges_used(next_edges.len());
+            cell.increment_used_edges(next_edges.len());
+            for edge in &next_edges {
+                cell.remove_edge(&edge.start); // NEW: Actual removal
+            }
         }
 
         all_edges.extend(next_edges.clone());
@@ -295,7 +267,7 @@ pub fn trace_all_rings(cells: &mut Vec<Vec<Option<CellWithEdges>>>) -> Vec<Vec<P
                     None => {
                         // Check if there are still edges in this cell
                         if let Some(Some(cell)) = cells.get(row).and_then(|r| r.get(col)) {
-                            if !cell.is_cleared() && cell.used_edges < cell.shape.edges.len() {
+                            if !cell.is_cleared() && !cell.shape.edges.is_empty() {
                                 failed_traces += 1;
                             }
                         }
@@ -342,39 +314,47 @@ mod tests {
         assert_eq!(cell.used_edges, 0);
 
         // Get first edge
-        let first = cell.get_first_edge().unwrap();
-        assert_eq!(first.start.x, 0.0);
+        let first = cell.get_chained_edges_from(None);
+        assert!(!first.is_empty());
 
-        // Mark as used
-        cell.mark_edges_used(1);
+        // Remove the edge
+        cell.remove_edge(&first[0].start);
+        cell.increment_used_edges(1);
         assert_eq!(cell.used_edges, 1);
         assert!(!cell.is_cleared());
 
-        // Mark second edge as used
-        cell.mark_edges_used(1);
+        // Remove second edge
+        let second = cell.get_chained_edges_from(None);
+        if !second.is_empty() {
+            cell.remove_edge(&second[0].start);
+            cell.increment_used_edges(1);
+        }
         assert_eq!(cell.used_edges, 2);
         assert!(cell.is_cleared());
     }
 
     #[test]
-    fn test_get_edges_from() {
+    fn test_edge_chaining() {
+        // Create a chain of edges: (0,0) -> (1,0) -> (1,1) -> (0,1)
         let edge1 = Edge::new(Point::new(0.0, 0.0), Point::new(1.0, 0.0), Move::Right);
         let edge2 = Edge::new(Point::new(1.0, 0.0), Point::new(1.0, 1.0), Move::None);
-        let edge3 = Edge::new(Point::new(1.0, 0.0), Point::new(2.0, 0.0), Move::None);
+        let edge3 = Edge::new(Point::new(1.0, 1.0), Point::new(0.0, 1.0), Move::None);
 
         let shape = CellShape::new(vec![edge1, edge2, edge3]);
         let cell = CellWithEdges::new(shape);
 
-        // Find edges starting from (1.0, 0.0)
-        let edges = cell.get_edges_from(&Point::new(1.0, 0.0));
-        assert_eq!(edges.len(), 2);
+        // Start from (0,0), should follow chain through all 3 edges
+        let edges = cell.get_chained_edges_from(Some(&Point::new(0.0, 0.0)));
+        assert_eq!(edges.len(), 3);
 
-        // Find edges starting from (0.0, 0.0)
-        let edges = cell.get_edges_from(&Point::new(0.0, 0.0));
-        assert_eq!(edges.len(), 1);
+        // Verify chain order
+        assert_eq!(edges[0].start, Point::new(0.0, 0.0));
+        assert_eq!(edges[0].end, Point::new(1.0, 0.0));
+        assert_eq!(edges[1].end, Point::new(1.0, 1.0));
+        assert_eq!(edges[2].end, Point::new(0.0, 1.0));
 
         // Find edges starting from non-existent point
-        let edges = cell.get_edges_from(&Point::new(5.0, 5.0));
+        let edges = cell.get_chained_edges_from(Some(&Point::new(5.0, 5.0)));
         assert_eq!(edges.len(), 0);
     }
 
