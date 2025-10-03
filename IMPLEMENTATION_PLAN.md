@@ -662,31 +662,16 @@ RUST_LOG=debug cargo run --example phase2_demo
 
 ## File Checklist
 
-- [x] `/Users/brent/source/geo-marching-squares-rs/src/types.rs` - Add Hash + Eq for Point
-- [x] `/Users/brent/source/geo-marching-squares-rs/src/cell_shapes.rs` - Change edges to HashMap
-- [x] `/Users/brent/source/geo-marching-squares-rs/src/edge_tracing.rs` - Update CellWithEdges methods
-- [x] `/Users/brent/source/geo-marching-squares-rs/src/edge_tracing.rs` - Update trace_ring
-- [x] `/Users/brent/source/geo-marching-squares-rs/src/edge_tracing.rs` - Update trace_all_rings
-- [x] `/Users/brent/source/geo-marching-squares-rs/src/edge_tracing.rs` - Fix tests
-- [x] Run `cargo test` - All 40 tests passing!
-- [x] Run `cargo run --example simple_contours` - SUCCESS
-- [x] Run `cargo run --example phase2_demo` - SUCCESS
+- [ ] `/Users/brent/source/geo-marching-squares-rs/src/types.rs` - Add Hash + Eq for Point
+- [ ] `/Users/brent/source/geo-marching-squares-rs/src/cell_shapes.rs` - Change edges to HashMap
+- [ ] `/Users/brent/source/geo-marching-squares-rs/src/edge_tracing.rs` - Update CellWithEdges methods
+- [ ] `/Users/brent/source/geo-marching-squares-rs/src/edge_tracing.rs` - Update trace_ring
+- [ ] `/Users/brent/source/geo-marching-squares-rs/src/edge_tracing.rs` - Update trace_all_rings
+- [ ] `/Users/brent/source/geo-marching-squares-rs/src/edge_tracing.rs` - Fix tests
+- [ ] Run `cargo test` 
+- [ ] Run `cargo run --example simple_contours` 
+- [ ] Run `cargo run --example phase2_demo` 
 - [ ] Git commit
-
-## IMPLEMENTATION COMPLETE ✅
-
-All phases completed successfully:
-- ✅ Phase 1: Point Hash/Eq implementation
-- ✅ Phase 2: CellShape HashMap conversion
-- ✅ Phase 3: CellWithEdges HashMap methods
-- ✅ Phase 4: Edge removal in trace_ring
-- ✅ Phase 5: All tests passing (40/40)
-- ✅ Examples running correctly
-
-The Rust implementation now matches the Java algorithm by:
-1. Using HashMap<Point, Edge> instead of Vec<Edge>
-2. Actually removing edges as they're consumed (not just incrementing counter)
-3. Checking HashMap.is_empty() for cleared status
 
 ---
 

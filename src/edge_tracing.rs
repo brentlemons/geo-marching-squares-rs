@@ -98,9 +98,9 @@ fn points_equal(p1: &Point, p2: &Point) -> bool {
 ///
 /// Returns the list of points forming a closed ring, or None if tracing fails
 ///
-/// This follows the Java algorithm:
-/// 1. Get chained edges from current cell (may be multiple edges)
-/// 2. Add all edge points to the ring
+/// This follows the Java algorithm exactly (MarchingSquares.java lines 63-109):
+/// 1. Get chained edges from current cell
+/// 2. Remove edges and check for ring closure after each edge
 /// 3. Use the last edge's Move direction to go to next cell
 /// 4. Repeat until ring closes
 pub fn trace_ring(
@@ -117,110 +117,115 @@ pub fn trace_ring(
         return None;
     }
 
-    // Get the chained edges from the starting cell (Java: getEdges(null, null))
-    let first_edges = start_cell.get_chained_edges_from(None);
-    if first_edges.is_empty() {
-        return None;
-    }
-
-    let start_point = first_edges[0].start.clone();
-    let mut all_edges = Vec::new();
-    all_edges.extend(first_edges.clone());
-
-    // Pre-allocate with estimated capacity
-    let mut points = Vec::with_capacity(32);
-
     let mut current_row = start_row;
     let mut current_col = start_col;
-    let mut current_edges = first_edges;
+    let mut current_edge: Option<Edge> = None;
+    let mut all_edges = Vec::new();
+    let mut go_on = true;
 
     let mut iterations = 0;
     const MAX_ITERATIONS: usize = 10000;
 
-    // Mark initial edges as used AND REMOVE THEM (matches Java lines 75-78)
-    if let Some(Some(cell)) = cells.get_mut(current_row).and_then(|r| r.get_mut(current_col)) {
-        cell.increment_used_edges(current_edges.len());
-        for edge in &current_edges {
-            cell.remove_edge(&edge.start); // NEW: Actual removal
-        }
-    }
-
-    loop {
+    // Java: while (goOn && !cells[y][x].getEdges(...).isEmpty())
+    while go_on {
         iterations += 1;
         if iterations > MAX_ITERATIONS {
             return None;
         }
 
-        // Get the last edge from the current batch (determines next move)
-        let last_edge = match current_edges.last() {
-            Some(edge) => edge,
-            None => return None,
-        };
-
-        // Check if we've closed the loop
-        if points_equal(&last_edge.end, &start_point) {
-            break;
-        }
-
-        // Move to the next cell based on the last edge's direction
-        let next_pos = last_edge.move_dir.apply(current_row, current_col);
-
-        match next_pos {
-            Some((next_row, next_col)) => {
-                if next_row >= rows || next_col >= cols {
-                    return None;
-                }
-                current_row = next_row;
-                current_col = next_col;
-            }
-            None => {
-                // Move::None means edge stays in same cell
-                // This should only happen if loop closes in same cell
-                // The check at the top of the loop will catch this on next iteration
-                continue;
-            }
-        }
-
-        // Get the next cell
-        let next_cell = match cells
+        // Get the current cell
+        let cell = match cells
             .get(current_row)
             .and_then(|r| r.get(current_col))
             .and_then(|c| c.as_ref())
         {
-            Some(cell) => cell,
-            None => return None,
+            Some(c) => c,
+            None => break,
         };
 
-        if next_cell.is_cleared() {
-            return None;
+        if cell.is_cleared() {
+            break;
         }
 
-        // Get chained edges starting from where last edge ended
-        let next_edges = next_cell.get_chained_edges_from(Some(&last_edge.end));
+        // Get chained edges from current cell
+        // Java: cells[y][x].getEdges(currentEdge==null?null:currentEdge.getEnd(), ...)
+        let tmp_edges = if let Some(ref edge) = current_edge {
+            cell.get_chained_edges_from(Some(&edge.end))
+        } else {
+            cell.get_chained_edges_from(None)
+        };
 
-        if next_edges.is_empty() {
-            // No matching edge - this ring cannot continue
-            // This is normal when edges have been consumed by other rings
-            return None;
+        if tmp_edges.is_empty() {
+            break;
         }
 
-        // Mark edges as used AND REMOVE THEM (matches Java lines 75-78)
-        if let Some(Some(cell)) = cells.get_mut(current_row).and_then(|r| r.get_mut(current_col)) {
-            cell.increment_used_edges(next_edges.len());
-            for edge in &next_edges {
-                cell.remove_edge(&edge.start); // NEW: Actual removal
+        // Java: cells[y][x].incrementUsedEdges(tmpEdges.size());
+        if let Some(Some(cell_mut)) = cells.get_mut(current_row).and_then(|r| r.get_mut(current_col)) {
+            cell_mut.increment_used_edges(tmp_edges.len());
+
+            // Java: for (Edge edge : tmpEdges) { ... }
+            for edge in &tmp_edges {
+                // Java: cells[y][x].removeEdge(edge.getStart());
+                cell_mut.remove_edge(&edge.start);
+
+                // Java: currentEdge = edge; edges.add(edge);
+                current_edge = Some(edge.clone());
+                all_edges.push(edge.clone());
+
+                // Java: if (currentEdge.getEnd().equals(edges.get(0).getStart()))
+                if !all_edges.is_empty() && points_equal(&edge.end, &all_edges[0].start) {
+                    go_on = false;
+                    break;  // Break from for loop (Java line 82)
+                }
+            }
+        } else {
+            break;
+        }
+
+        // Java: Move logic happens AFTER the for loop (lines 86-97)
+        // This runs even if we broke from the for loop above
+        if let Some(ref edge) = current_edge {
+            match edge.move_dir {
+                crate::types::Move::Right => {
+                    if current_col + 1 >= cols {
+                        break;
+                    }
+                    current_col += 1;
+                }
+                crate::types::Move::Down => {
+                    if current_row + 1 >= rows {
+                        break;
+                    }
+                    current_row += 1;
+                }
+                crate::types::Move::Left => {
+                    if current_col == 0 {
+                        break;
+                    }
+                    current_col -= 1;
+                }
+                crate::types::Move::Up => {
+                    if current_row == 0 {
+                        break;
+                    }
+                    current_row -= 1;
+                }
+                crate::types::Move::None => {
+                    // Edge stays in same cell
+                    // Continue with while loop
+                }
             }
         }
 
-        all_edges.extend(next_edges.clone());
-        current_edges = next_edges;
+        // If go_on is false, the while condition will fail on next iteration
     }
 
-    // Build the points list from all edges (Java style: add start, then all ends)
+    // Build the points list from all edges (Java lines 100-106)
     if all_edges.is_empty() {
         return None;
     }
 
+    let mut points = Vec::with_capacity(all_edges.len() + 1);
     points.push(all_edges[0].start.clone());
     for edge in &all_edges {
         points.push(edge.end.clone());
