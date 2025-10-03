@@ -66,8 +66,10 @@ impl CellWithEdges {
 }
 
 /// Compare two points with floating point tolerance
+/// Using 1e-6 (about 0.1 meters at equator) for geographic coordinate comparisons
+/// after PROJ transformations which can introduce small numerical differences
 fn points_equal(p1: &Point, p2: &Point) -> bool {
-    const EPSILON: f64 = 1e-9;
+    const EPSILON: f64 = 1e-6;
     (p1.x - p2.x).abs() < EPSILON && (p1.y - p2.y).abs() < EPSILON
 }
 
