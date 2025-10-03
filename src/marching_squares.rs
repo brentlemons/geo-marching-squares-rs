@@ -114,7 +114,10 @@ fn process_band(grid: &GeoGrid, lower: f64, upper: f64) -> Result<Option<Feature
                 for edge_list in edges {
                     let ring: Vec<Vec<f64>> = edge_list
                         .iter()
-                        .map(|p| vec![p.x, p.y])
+                        .map(|p| vec![
+                            crate::types::round_coordinate(p.x),
+                            crate::types::round_coordinate(p.y)
+                        ])
                         .collect();
                     if ring.len() >= 3 {
                         polygons.push(ring);
@@ -203,7 +206,10 @@ fn process_isoline(grid: &GeoGrid, level: f64) -> Result<Option<Feature>> {
                 for segment in segments {
                     let line: Vec<Vec<f64>> = segment
                         .iter()
-                        .map(|p| vec![p.x, p.y])
+                        .map(|p| vec![
+                            crate::types::round_coordinate(p.x),
+                            crate::types::round_coordinate(p.y)
+                        ])
                         .collect();
                     if line.len() >= 2 {
                         line_strings.push(line);
@@ -753,7 +759,10 @@ pub fn generate_isobands_phase2(grid: &GeoGrid, lower: f64, upper: f64) -> Resul
             // Add exterior ring (must be closed for GeoJSON)
             let mut exterior_coords: Vec<Vec<f64>> = exterior
                 .iter()
-                .map(|p| vec![p.x, p.y])
+                .map(|p| vec![
+                    crate::types::round_coordinate(p.x),
+                    crate::types::round_coordinate(p.y)
+                ])
                 .collect();
             // Close the ring by duplicating the first point
             if let Some(first) = exterior_coords.first().cloned() {
@@ -765,7 +774,10 @@ pub fn generate_isobands_phase2(grid: &GeoGrid, lower: f64, upper: f64) -> Resul
             for hole in holes {
                 let mut hole_coords: Vec<Vec<f64>> = hole
                     .iter()
-                    .map(|p| vec![p.x, p.y])
+                    .map(|p| vec![
+                        crate::types::round_coordinate(p.x),
+                        crate::types::round_coordinate(p.y)
+                    ])
                     .collect();
                 // Close the ring by duplicating the first point
                 if let Some(first) = hole_coords.first().cloned() {
