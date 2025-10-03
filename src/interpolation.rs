@@ -57,10 +57,10 @@ pub fn interpolate_point(
     // Handle degenerate case where value0 == value1
     let value_diff = value1 - value0;
     if value_diff.abs() < 1e-10 {
-        // No gradient - return midpoint
+        // No gradient - return rounded midpoint
         return Point::from_lon_lat(
-            (point0.x + point1.x) / 2.0,
-            (point0.y + point1.y) / 2.0,
+            crate::types::round_coordinate((point0.x + point1.x) / 2.0),
+            crate::types::round_coordinate((point0.y + point1.y) / 2.0),
         );
     }
 
@@ -79,7 +79,11 @@ pub fn interpolate_point(
     let y = (1.0 - new_mu) * point0.y + new_mu * point1.y;
 
     // Round coordinates for consistency in edge tracing
-    Point::from_lon_lat(x, y)
+    // This ensures adjacent cells create identical edge endpoints
+    Point::from_lon_lat(
+        crate::types::round_coordinate(x),
+        crate::types::round_coordinate(y)
+    )
 }
 
 /// Interpolates a point along a specific side of a grid cell.
@@ -183,10 +187,10 @@ pub fn interpolate_point_great_circle(
     // Handle degenerate case where value0 == value1
     let value_diff = value1 - value0;
     if value_diff.abs() < 1e-10 {
-        // No gradient - return midpoint
+        // No gradient - return rounded midpoint
         return Point::from_lon_lat(
-            (point0.x + point1.x) / 2.0,
-            (point0.y + point1.y) / 2.0,
+            crate::types::round_coordinate((point0.x + point1.x) / 2.0),
+            crate::types::round_coordinate((point0.y + point1.y) / 2.0),
         );
     }
 
@@ -215,7 +219,10 @@ pub fn interpolate_point_great_circle(
         // Points are too close or antipodal - fall back to linear interpolation
         let x = (1.0 - new_mu) * point0.x + new_mu * point1.x;
         let y = (1.0 - new_mu) * point0.y + new_mu * point1.y;
-        return Point::from_lon_lat(x, y);
+        return Point::from_lon_lat(
+            crate::types::round_coordinate(x),
+            crate::types::round_coordinate(y)
+        );
     }
 
     // Interpolate along great circle
@@ -230,7 +237,11 @@ pub fn interpolate_point_great_circle(
     let lon = y.atan2(x);
 
     // Round coordinates for consistency in edge tracing
-    Point::from_lon_lat(lon.to_degrees(), lat.to_degrees())
+    // This ensures adjacent cells create identical edge endpoints
+    Point::from_lon_lat(
+        crate::types::round_coordinate(lon.to_degrees()),
+        crate::types::round_coordinate(lat.to_degrees())
+    )
 }
 
 #[cfg(test)]
