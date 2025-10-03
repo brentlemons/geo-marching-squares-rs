@@ -54,8 +54,18 @@ pub fn interpolate_point(
     point1: &Point,
     smoothing_factor: f64,
 ) -> Point {
+    // Handle degenerate case where value0 == value1
+    let value_diff = value1 - value0;
+    if value_diff.abs() < 1e-10 {
+        // No gradient - return midpoint
+        return Point::from_lon_lat(
+            (point0.x + point1.x) / 2.0,
+            (point0.y + point1.y) / 2.0,
+        );
+    }
+
     // Linear interpolation factor
-    let mu = (level - value0) / (value1 - value0);
+    let mu = (level - value0) / value_diff;
 
     // Apply cosine smoothing
     let mu2 = (1.0 - (mu * PI).cos()) / 2.0;
@@ -170,8 +180,18 @@ pub fn interpolate_point_great_circle(
     point1: &Point,
     smoothing_factor: f64,
 ) -> Point {
+    // Handle degenerate case where value0 == value1
+    let value_diff = value1 - value0;
+    if value_diff.abs() < 1e-10 {
+        // No gradient - return midpoint
+        return Point::from_lon_lat(
+            (point0.x + point1.x) / 2.0,
+            (point0.y + point1.y) / 2.0,
+        );
+    }
+
     // Linear interpolation factor
-    let mu = (level - value0) / (value1 - value0);
+    let mu = (level - value0) / value_diff;
 
     // Apply cosine smoothing
     let mu2 = (1.0 - (mu * PI).cos()) / 2.0;
@@ -189,6 +209,14 @@ pub fn interpolate_point_great_circle(
     // Calculate great circle distance
     let d = (lat0.sin() * lat1.sin() +
              lat0.cos() * lat1.cos() * (lon1 - lon0).cos()).acos();
+
+    // Handle degenerate case where points are same or antipodal
+    if d.abs() < 1e-10 || (d - PI).abs() < 1e-10 {
+        // Points are too close or antipodal - fall back to linear interpolation
+        let x = (1.0 - new_mu) * point0.x + new_mu * point1.x;
+        let y = (1.0 - new_mu) * point0.y + new_mu * point1.y;
+        return Point::from_lon_lat(x, y);
+    }
 
     // Interpolate along great circle
     let a = ((1.0 - new_mu) * d).sin() / d.sin();
