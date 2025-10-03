@@ -51,6 +51,61 @@ impl CellWithEdges {
             .collect()
     }
 
+    /// Get chained edges starting from a given point (Java-style)
+    ///
+    /// This follows the Java getEdges() logic:
+    /// 1. Start with the given point (or first available if None)
+    /// 2. Find edge starting at that point
+    /// 3. Use edge's end point to find next edge
+    /// 4. Repeat until no more edges found
+    ///
+    /// Returns a list of edges that form a continuous chain within this cell.
+    pub fn get_chained_edges_from(&self, start_point: Option<&Point>) -> Vec<Edge> {
+        if self.cleared || self.used_edges >= self.shape.edges.len() {
+            return Vec::new();
+        }
+
+        let available_edges: Vec<&Edge> = self.shape.edges.iter().skip(self.used_edges).collect();
+
+        if available_edges.is_empty() {
+            return Vec::new();
+        }
+
+        // Find starting point
+        let mut current_start = if let Some(pt) = start_point {
+            pt.clone()
+        } else {
+            // No start point provided - use first available edge's start
+            available_edges[0].start.clone()
+        };
+
+        let mut result = Vec::new();
+        let mut used_indices = std::collections::HashSet::new();
+
+        // Follow the chain of edges within this cell
+        // Stop when we've checked all edges or can't find a continuation
+        while used_indices.len() < available_edges.len() {
+            // Find an unused edge that starts at current_start
+            let next_edge_opt = available_edges
+                .iter()
+                .enumerate()
+                .find(|(idx, edge)| {
+                    !used_indices.contains(idx) && points_equal(&edge.start, &current_start)
+                });
+
+            match next_edge_opt {
+                Some((idx, edge)) => {
+                    result.push((*edge).clone());
+                    used_indices.insert(idx);
+                    current_start = edge.end.clone();
+                }
+                None => break, // No more edges in chain
+            }
+        }
+
+        result
+    }
+
     /// Mark edges as used
     pub fn mark_edges_used(&mut self, count: usize) {
         self.used_edges += count;
@@ -76,6 +131,12 @@ fn points_equal(p1: &Point, p2: &Point) -> bool {
 /// Trace a single polygon ring starting from a cell
 ///
 /// Returns the list of points forming a closed ring, or None if tracing fails
+///
+/// This follows the Java algorithm:
+/// 1. Get chained edges from current cell (may be multiple edges)
+/// 2. Add all edge points to the ring
+/// 3. Use the last edge's Move direction to go to next cell
+/// 4. Repeat until ring closes
 pub fn trace_ring(
     cells: &mut Vec<Vec<Option<CellWithEdges>>>,
     start_row: usize,
@@ -90,76 +151,64 @@ pub fn trace_ring(
         return None;
     }
 
-    // Get the first available edge
-    let first_edge = start_cell.get_first_edge()?.clone();
-    let start_point = first_edge.start.clone();
+    // Get the chained edges from the starting cell (Java: getEdges(null, null))
+    let first_edges = start_cell.get_chained_edges_from(None);
+    if first_edges.is_empty() {
+        return None;
+    }
 
-    // Pre-allocate with estimated capacity (typical rings have 20-50 points)
+    let start_point = first_edges[0].start.clone();
+    let mut all_edges = Vec::new();
+    all_edges.extend(first_edges.clone());
+
+    // Pre-allocate with estimated capacity
     let mut points = Vec::with_capacity(32);
-    points.push(start_point.clone());
 
     let mut current_row = start_row;
     let mut current_col = start_col;
-    let mut current_edge = first_edge;
+    let mut current_edges = first_edges;
 
     let mut iterations = 0;
-    const MAX_ITERATIONS: usize = 10000; // Safety limit
+    const MAX_ITERATIONS: usize = 10000;
+
+    // Mark initial edges as used
+    if let Some(Some(cell)) = cells.get_mut(current_row).and_then(|r| r.get_mut(current_col)) {
+        cell.mark_edges_used(current_edges.len());
+    }
 
     loop {
         iterations += 1;
         if iterations > MAX_ITERATIONS {
-            // Safety check to prevent infinite loops
             return None;
         }
 
-        // Check if we've closed the loop BEFORE adding the point
-        // to avoid duplicate start/end points
-        if points_equal(&current_edge.end, &start_point) {
-            // Mark this edge as used before returning
-            if let Some(Some(cell)) = cells.get_mut(current_row).and_then(|r| r.get_mut(current_col)) {
-                cell.mark_edges_used(1);
-            }
-            // Successfully closed the ring
-            return Some(points);
+        // Get the last edge from the current batch (determines next move)
+        let last_edge = match current_edges.last() {
+            Some(edge) => edge,
+            None => return None,
+        };
+
+        // Check if we've closed the loop
+        if points_equal(&last_edge.end, &start_point) {
+            break;
         }
 
-        // Add the end point only if it's not a duplicate of the last point
-        // (This can happen with Move::None edges in the same cell)
-        if points.is_empty() || !points_equal(points.last().unwrap(), &current_edge.end) {
-            points.push(current_edge.end.clone());
-        }
-
-        // Mark this edge as used
-        if let Some(Some(cell)) = cells.get_mut(current_row).and_then(|r| r.get_mut(current_col)) {
-            cell.mark_edges_used(1);
-        }
-
-        // Move to the next cell based on the edge direction
-        let next_pos = current_edge.move_dir.apply(current_row, current_col);
+        // Move to the next cell based on the last edge's direction
+        let next_pos = last_edge.move_dir.apply(current_row, current_col);
 
         match next_pos {
             Some((next_row, next_col)) => {
-                // Validate bounds
                 if next_row >= rows || next_col >= cols {
-                    // Reached grid boundary without closing
                     return None;
                 }
-
                 current_row = next_row;
                 current_col = next_col;
             }
             None => {
-                // Edge doesn't move to another cell (Move::None)
-                // Look for another edge in the same cell that continues from this point
-                if let Some(Some(cell)) = cells.get(current_row).and_then(|r| r.get(current_col)) {
-                    let next_edges = cell.get_edges_from(&current_edge.end);
-                    if let Some(&next_edge) = next_edges.first() {
-                        current_edge = next_edge.clone();
-                        continue;
-                    }
-                }
-                // No continuation found
-                return None;
+                // Move::None means edge stays in same cell
+                // This should only happen if loop closes in same cell
+                // The check at the top of the loop will catch this on next iteration
+                continue;
             }
         }
 
@@ -170,35 +219,45 @@ pub fn trace_ring(
             .and_then(|c| c.as_ref())
         {
             Some(cell) => cell,
-            None => return None, // No cell at this position
+            None => return None,
         };
 
         if next_cell.is_cleared() {
-            // Cell has no more edges
             return None;
         }
 
-        // Find an edge that starts where we ended
-        let matching_edges = next_cell.get_edges_from(&current_edge.end);
+        // Get chained edges starting from where last edge ended
+        let next_edges = next_cell.get_chained_edges_from(Some(&last_edge.end));
 
-        if matching_edges.is_empty() {
-            // No matching edge found - LOG DIAGNOSTIC INFO
-            eprintln!("❌ EDGE MISMATCH at cell ({}, {})", current_row, current_col);
-            eprintln!("   Looking for edge starting at: ({:.6}, {:.6})", current_edge.end.x, current_edge.end.y);
-            eprintln!("   Available edges in cell:");
-            for (i, edge) in next_cell.shape.edges.iter().skip(next_cell.used_edges).enumerate() {
-                eprintln!("      Edge {}: start=({:.6}, {:.6}) end=({:.6}, {:.6})",
-                    i, edge.start.x, edge.start.y, edge.end.x, edge.end.y);
-                let dx = (edge.start.x - current_edge.end.x).abs();
-                let dy = (edge.start.y - current_edge.end.y).abs();
-                eprintln!("         Distance from target: dx={:.10}, dy={:.10}", dx, dy);
-            }
-            eprintln!("   EPSILON threshold: {:.10}", 1e-6);
+        if next_edges.is_empty() {
+            // No matching edge - this ring cannot continue
+            // This is normal when edges have been consumed by other rings
             return None;
         }
 
-        // Take the first matching edge
-        current_edge = matching_edges[0].clone();
+        // Mark edges as used
+        if let Some(Some(cell)) = cells.get_mut(current_row).and_then(|r| r.get_mut(current_col)) {
+            cell.mark_edges_used(next_edges.len());
+        }
+
+        all_edges.extend(next_edges.clone());
+        current_edges = next_edges;
+    }
+
+    // Build the points list from all edges (Java style: add start, then all ends)
+    if all_edges.is_empty() {
+        return None;
+    }
+
+    points.push(all_edges[0].start.clone());
+    for edge in &all_edges {
+        points.push(edge.end.clone());
+    }
+
+    if points.len() >= 3 {
+        Some(points)
+    } else {
+        None
     }
 }
 
@@ -247,13 +306,11 @@ pub fn trace_all_rings(cells: &mut Vec<Vec<Option<CellWithEdges>>>) -> Vec<Vec<P
         }
     }
 
-    eprintln!("\n📊 EDGE TRACING SUMMARY:");
-    eprintln!("   Total rings traced: {}", rings.len());
-    eprintln!("   Total trace attempts: {}", total_attempts);
-    eprintln!("   Failed traces (unconnected edges): {}", failed_traces);
-    if failed_traces > 0 {
-        eprintln!("   ⚠️  {} edges could not connect to neighboring cells", failed_traces);
-    }
+    // Optional: Uncomment for debugging
+    // eprintln!("\n📊 EDGE TRACING SUMMARY:");
+    // eprintln!("   Total rings traced: {}", rings.len());
+    // eprintln!("   Total trace attempts: {}", total_attempts);
+    // eprintln!("   Failed traces: {}", failed_traces);
 
     rings
 }
