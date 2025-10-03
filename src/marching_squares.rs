@@ -750,19 +750,27 @@ pub fn generate_isobands_phase2(grid: &GeoGrid, lower: f64, upper: f64) -> Resul
         .map(|(exterior, holes)| {
             let mut polygon_rings = Vec::new();
 
-            // Add exterior ring
-            let exterior_coords: Vec<Vec<f64>> = exterior
+            // Add exterior ring (must be closed for GeoJSON)
+            let mut exterior_coords: Vec<Vec<f64>> = exterior
                 .iter()
                 .map(|p| vec![p.x, p.y])
                 .collect();
+            // Close the ring by duplicating the first point
+            if let Some(first) = exterior_coords.first().cloned() {
+                exterior_coords.push(first);
+            }
             polygon_rings.push(exterior_coords);
 
-            // Add interior rings (holes)
+            // Add interior rings (holes) - also must be closed
             for hole in holes {
-                let hole_coords: Vec<Vec<f64>> = hole
+                let mut hole_coords: Vec<Vec<f64>> = hole
                     .iter()
                     .map(|p| vec![p.x, p.y])
                     .collect();
+                // Close the ring by duplicating the first point
+                if let Some(first) = hole_coords.first().cloned() {
+                    hole_coords.push(first);
+                }
                 polygon_rings.push(hole_coords);
             }
 

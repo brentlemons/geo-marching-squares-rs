@@ -110,18 +110,23 @@ pub fn trace_ring(
             return None;
         }
 
-        // Add the end point
+        // Check if we've closed the loop BEFORE adding the point
+        // to avoid duplicate start/end points
+        if points_equal(&current_edge.end, &start_point) {
+            // Mark this edge as used before returning
+            if let Some(Some(cell)) = cells.get_mut(current_row).and_then(|r| r.get_mut(current_col)) {
+                cell.mark_edges_used(1);
+            }
+            // Successfully closed the ring
+            return Some(points);
+        }
+
+        // Add the end point (not the closing point since we checked above)
         points.push(current_edge.end.clone());
 
         // Mark this edge as used
         if let Some(Some(cell)) = cells.get_mut(current_row).and_then(|r| r.get_mut(current_col)) {
             cell.mark_edges_used(1);
-        }
-
-        // Check if we've closed the loop
-        if points_equal(&current_edge.end, &start_point) {
-            // Successfully closed the ring
-            return Some(points);
         }
 
         // Move to the next cell based on the edge direction
@@ -184,6 +189,7 @@ pub fn trace_ring(
 /// Trace all polygon rings from a grid of cells
 ///
 /// Returns a list of polygon rings (each ring is a Vec<Point>)
+/// Only returns rings with at least 3 points (valid polygons per GeoJSON spec)
 pub fn trace_all_rings(cells: &mut Vec<Vec<Option<CellWithEdges>>>) -> Vec<Vec<Point>> {
     let mut rings = Vec::new();
 
@@ -198,7 +204,13 @@ pub fn trace_all_rings(cells: &mut Vec<Vec<Option<CellWithEdges>>>) -> Vec<Vec<P
         for col in 0..cols {
             // Keep tracing from this cell until all its edges are used
             while let Some(ring) = trace_ring(cells, row, col) {
-                rings.push(ring);
+                // Only include rings with at least 3 points
+                // (GeoJSON requires at least 4 coordinates for a valid polygon ring,
+                // with the first and last being identical. Since we don't duplicate
+                // the closing point, we need at least 3 distinct points)
+                if ring.len() >= 3 {
+                    rings.push(ring);
+                }
             }
         }
     }
