@@ -4,7 +4,10 @@ use serde::{Deserialize, Serialize};
 
 /// Round coordinate to 6 decimal places (~111mm precision at equator)
 /// This helps edge tracing by ensuring consistent coordinate values
-fn round_coordinate(coord: f64) -> f64 {
+///
+/// IMPORTANT: Should be applied AFTER coordinate transformation to ensure
+/// all points (grid corners and interpolated edges) are consistently rounded
+pub fn round_coordinate(coord: f64) -> f64 {
     (coord * 1_000_000.0).round() / 1_000_000.0
 }
 
@@ -46,12 +49,13 @@ impl Point {
         Self { x, y }
     }
 
-    /// Create a point from longitude and latitude with coordinate rounding
-    /// Rounds to 6 decimal places (~111mm precision at equator)
+    /// Create a point from longitude and latitude
+    /// Note: Coordinate rounding should be applied AFTER PROJ transformation
+    /// to ensure consistency across all points (grid corners and interpolated edges)
     pub fn from_lon_lat(lon: f64, lat: f64) -> Self {
         Self {
-            x: round_coordinate(lon),
-            y: round_coordinate(lat),
+            x: lon,
+            y: lat,
         }
     }
 
