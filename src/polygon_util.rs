@@ -47,6 +47,19 @@ pub fn polygon_in_polygon(subject: &[Point], polygon: &[Point]) -> bool {
 ///
 /// Returns Vec<(exterior_ring, Vec<interior_rings>)>
 pub fn organize_polygons(mut rings: Vec<Vec<Point>>) -> Vec<(Vec<Point>, Vec<Vec<Point>>)> {
+    // Debug: Check input rings for long segments
+    for (idx, ring) in rings.iter().enumerate() {
+        for i in 0..ring.len().saturating_sub(1) {
+            let p1 = &ring[i];
+            let p2 = &ring[i + 1];
+            let seg_len = ((p2.x - p1.x).powi(2) + (p2.y - p1.y).powi(2)).sqrt();
+            if seg_len > 10.0 {
+                eprintln!("🚨 LONG SEGMENT IN INPUT RING {}: segment {} from ({:.6},{:.6}) to ({:.6},{:.6}), length={:.2}°",
+                    idx, i, p1.x, p1.y, p2.x, p2.y, seg_len);
+            }
+        }
+    }
+
     let mut result: Vec<(Vec<Point>, Vec<Vec<Point>>)> = Vec::new();
 
     while !rings.is_empty() {
