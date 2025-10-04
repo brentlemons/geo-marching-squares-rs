@@ -124,6 +124,32 @@ pub fn organize_polygons(mut rings: Vec<Vec<Point>>) -> Vec<(Vec<Point>, Vec<Vec
         }
     }
 
+    // Debug: Check output polygons for long segments
+    for (poly_idx, (exterior, holes)) in result.iter().enumerate() {
+        // Check exterior ring
+        for i in 0..exterior.len().saturating_sub(1) {
+            let p1 = &exterior[i];
+            let p2 = &exterior[i + 1];
+            let seg_len = ((p2.x - p1.x).powi(2) + (p2.y - p1.y).powi(2)).sqrt();
+            if seg_len > 10.0 {
+                eprintln!("🚨 LONG SEGMENT IN OUTPUT POLYGON {} EXTERIOR: segment {} from ({:.6},{:.6}) to ({:.6},{:.6}), length={:.2}°",
+                    poly_idx, i, p1.x, p1.y, p2.x, p2.y, seg_len);
+            }
+        }
+        // Check hole rings
+        for (hole_idx, hole) in holes.iter().enumerate() {
+            for i in 0..hole.len().saturating_sub(1) {
+                let p1 = &hole[i];
+                let p2 = &hole[i + 1];
+                let seg_len = ((p2.x - p1.x).powi(2) + (p2.y - p1.y).powi(2)).sqrt();
+                if seg_len > 10.0 {
+                    eprintln!("🚨 LONG SEGMENT IN OUTPUT POLYGON {} HOLE {}: segment {} from ({:.6},{:.6}) to ({:.6},{:.6}), length={:.2}°",
+                        poly_idx, hole_idx, i, p1.x, p1.y, p2.x, p2.y, seg_len);
+                }
+            }
+        }
+    }
+
     result
 }
 
