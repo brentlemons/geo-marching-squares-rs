@@ -760,90 +760,41 @@ pub fn generate_isobands_phase2(grid: &GeoGrid, lower: f64, upper: f64) -> Resul
         .map(|(poly_idx, (exterior, holes))| {
             let mut polygon_rings = Vec::new();
 
-            // Debug: Check if ring is closed BEFORE rounding
-            let first_before = exterior.first();
-            let last_before = exterior.last();
-            let was_closed_before = if let (Some(f), Some(l)) = (first_before, last_before) {
-                f.x == l.x && f.y == l.y
-            } else {
-                false
-            };
+            // CRITICAL FIX: Close the ring BEFORE rounding to ensure first == last after rounding
+            // trace_ring returns rings where first and last are bitwise identical.
+            // If we round first, they may round to different values, creating diagonal artifacts.
+            // Solution: Duplicate the first point BEFORE rounding, then round all points together.
+            let mut exterior_for_rounding = exterior.clone();
+            if let Some(first) = exterior_for_rounding.first().cloned() {
+                exterior_for_rounding.push(first); // Now guaranteed: first == last (bitwise)
+            }
 
-            // Add exterior ring (must be closed for GeoJSON)
-            let mut exterior_coords: Vec<Vec<f64>> = exterior
+            // Now round all coordinates (including the duplicated closing point)
+            let exterior_coords: Vec<Vec<f64>> = exterior_for_rounding
                 .iter()
                 .map(|p| vec![
                     crate::types::round_coordinate(p.x),
                     crate::types::round_coordinate(p.y)
                 ])
                 .collect();
-
-            // Debug: Check if ring is closed AFTER rounding
-            let first_after = exterior_coords.first();
-            let last_after = exterior_coords.last();
-            let is_closed_after = if let (Some(f), Some(l)) = (first_after, last_after) {
-                (f[0] - l[0]).abs() < 1e-10 && (f[1] - l[1]).abs() < 1e-10
-            } else {
-                false
-            };
-
-            if was_closed_before && !is_closed_after {
-                // Ring WAS closed before rounding but NOT after - this is the bug!
-                if let (Some(f_before), Some(l_before), Some(f_after), Some(l_after)) =
-                    (first_before, last_before, first_after, last_after) {
-                    eprintln!("🔍 POLYGON {} ROUNDING CHANGED CLOSURE:", poly_idx);
-                    eprintln!("   Before rounding: first=({:.12},{:.12}) last=({:.12},{:.12}) [identical={}]",
-                        f_before.x, f_before.y, l_before.x, l_before.y, f_before.x == l_before.x && f_before.y == l_before.y);
-                    eprintln!("   After rounding:  first=({:.12},{:.12}) last=({:.12},{:.12}) [identical={}]",
-                        f_after[0], f_after[1], l_after[0], l_after[1],
-                        (f_after[0] - l_after[0]).abs() < 1e-10 && (f_after[1] - l_after[1]).abs() < 1e-10);
-                }
-            }
-
-            // Close the ring by duplicating the first point (if not already closed after rounding)
-            if let Some(first) = exterior_coords.first().cloned() {
-                if let Some(last) = exterior_coords.last() {
-                    // Check if ring is already closed after rounding
-                    let epsilon = 1e-10; // Tolerance for floating point comparison
-                    let dx = first[0] - last[0];
-                    let dy = first[1] - last[1];
-                    let distance = (dx * dx + dy * dy).sqrt();
-
-                    if distance > epsilon {
-                        // Ring not closed after rounding - close it with the ROUNDED first point
-                        eprintln!("🚨 APPENDING FIRST TO CLOSE: polygon {} has distance={:.12} between first ({:.6},{:.6}) and last ({:.6},{:.6})",
-                            poly_idx, distance, first[0], first[1], last[0], last[1]);
-                        exterior_coords.push(first);
-                    }
-                    // else: Ring already closed, no need to duplicate
-                }
-            }
             polygon_rings.push(exterior_coords);
 
-            // Add interior rings (holes) - also must be closed
+            // Add interior rings (holes) - also must be closed BEFORE rounding
             for hole in holes {
-                let mut hole_coords: Vec<Vec<f64>> = hole
+                // Close the ring BEFORE rounding
+                let mut hole_for_rounding = hole.clone();
+                if let Some(first) = hole_for_rounding.first().cloned() {
+                    hole_for_rounding.push(first);
+                }
+
+                // Now round all coordinates
+                let hole_coords: Vec<Vec<f64>> = hole_for_rounding
                     .iter()
                     .map(|p| vec![
                         crate::types::round_coordinate(p.x),
                         crate::types::round_coordinate(p.y)
                     ])
                     .collect();
-                // Close the ring by duplicating the first point (if not already closed after rounding)
-                if let Some(first) = hole_coords.first().cloned() {
-                    if let Some(last) = hole_coords.last() {
-                        // Check if ring is already closed after rounding
-                        let epsilon = 1e-10;
-                        let dx = first[0] - last[0];
-                        let dy = first[1] - last[1];
-                        let distance = (dx * dx + dy * dy).sqrt();
-
-                        if distance > epsilon {
-                            // Ring not closed after rounding - close it with the ROUNDED first point
-                            hole_coords.push(first);
-                        }
-                    }
-                }
                 polygon_rings.push(hole_coords);
             }
 
