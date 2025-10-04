@@ -730,21 +730,10 @@ pub fn generate_isobands_phase2(grid: &GeoGrid, lower: f64, upper: f64) -> Resul
     // Trace all polygon rings
     let rings = trace_all_rings(&mut cells);
 
+    // CRITICAL FIX: Match Java behavior - return None for empty results
+    // Java filters out empty features (MarchingSquares.java:245)
     if rings.is_empty() {
-        // Return empty feature
-        let geometry = Geometry::new(GeoValue::MultiPolygon(vec![]));
-        let mut feature = Feature {
-            bbox: None,
-            geometry: Some(geometry),
-            id: None,
-            properties: Some(serde_json::Map::new()),
-            foreign_members: None,
-        };
-        if let Some(ref mut props) = feature.properties {
-            props.insert("lower_level".to_string(), serde_json::json!(lower));
-            props.insert("upper_level".to_string(), serde_json::json!(upper));
-        }
-        return Ok(Some(feature));
+        return Ok(None);
     }
 
     // Organize polygons with hole detection

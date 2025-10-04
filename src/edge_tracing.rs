@@ -15,15 +15,19 @@ pub struct CellWithEdges {
     pub used_edges: usize,
     /// Whether this cell has been fully processed
     pub cleared: bool,
+    /// Total number of edges this cell started with (for Java-compatible cleared logic)
+    total_edge_count: usize,
 }
 
 impl CellWithEdges {
     /// Create a new cell with edges
     pub fn new(shape: CellShape) -> Self {
+        let total_edges = shape.edges.len();
         Self {
             shape,
             used_edges: 0,
             cleared: false,
+            total_edge_count: total_edges,
         }
     }
 
@@ -73,9 +77,13 @@ impl CellWithEdges {
     }
 
     /// Increment used edge counter and check if cleared
+    /// Matches Java Shape.java:540-543 behavior exactly
     pub fn increment_used_edges(&mut self, count: usize) {
         self.used_edges += count;
-        if self.shape.edges.is_empty() {
+        // CRITICAL FIX: Match Java's cleared logic
+        // Java: if (this.usedEdges >= this.edges.size()) this.cleared = true;
+        // Since we track total_edge_count at creation, compare against that
+        if self.used_edges >= self.total_edge_count {
             self.cleared = true;
         }
     }
