@@ -793,19 +793,21 @@ pub fn generate_isobands_phase2(grid: &GeoGrid, lower: f64, upper: f64) -> Resul
                 }
             }
 
-            // Close the ring by duplicating the first point
+            // Close the ring by duplicating the first point (if not already closed after rounding)
             if let Some(first) = exterior_coords.first().cloned() {
-                // Debug: Check the closing segment
                 if let Some(last) = exterior_coords.last() {
+                    // Check if ring is already closed after rounding
+                    let epsilon = 1e-10; // Tolerance for floating point comparison
                     let dx = first[0] - last[0];
                     let dy = first[1] - last[1];
-                    let close_len = (dx * dx + dy * dy).sqrt();
-                    if close_len > 10.0 {
-                        eprintln!("🚨 LONG CLOSING SEGMENT in polygon {}: last ({:.6},{:.6}) to first ({:.6},{:.6}), length={:.2}°",
-                            poly_idx, last[0], last[1], first[0], first[1], close_len);
+                    let distance = (dx * dx + dy * dy).sqrt();
+
+                    if distance > epsilon {
+                        // Ring not closed after rounding - close it with the ROUNDED first point
+                        exterior_coords.push(first);
                     }
+                    // else: Ring already closed, no need to duplicate
                 }
-                exterior_coords.push(first);
             }
             polygon_rings.push(exterior_coords);
 
@@ -818,9 +820,20 @@ pub fn generate_isobands_phase2(grid: &GeoGrid, lower: f64, upper: f64) -> Resul
                         crate::types::round_coordinate(p.y)
                     ])
                     .collect();
-                // Close the ring by duplicating the first point
+                // Close the ring by duplicating the first point (if not already closed after rounding)
                 if let Some(first) = hole_coords.first().cloned() {
-                    hole_coords.push(first);
+                    if let Some(last) = hole_coords.last() {
+                        // Check if ring is already closed after rounding
+                        let epsilon = 1e-10;
+                        let dx = first[0] - last[0];
+                        let dy = first[1] - last[1];
+                        let distance = (dx * dx + dy * dy).sqrt();
+
+                        if distance > epsilon {
+                            // Ring not closed after rounding - close it with the ROUNDED first point
+                            hole_coords.push(first);
+                        }
+                    }
                 }
                 polygon_rings.push(hole_coords);
             }
