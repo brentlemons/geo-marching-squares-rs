@@ -19,12 +19,7 @@ pub(super) fn triangle_bl(edges: &mut Vec<Edge>, points: &[Point], is_bottom: bo
     if is_left {
         edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
     }
-    // Only move DOWN if not at bottom boundary
-    if !is_bottom {
-        edges.push(Edge::new(p2.clone(), p0.clone(), Move::Down));
-    } else {
-        edges.push(Edge::new(p2.clone(), p0.clone(), Move::None));
-    }
+    edges.push(Edge::new(p2.clone(), p0.clone(), Move::Down));
 }
 
 // Case 166 | 4 (2212 | 0010) - Bottom-right triangle
@@ -41,12 +36,7 @@ pub(super) fn triangle_br(edges: &mut Vec<Edge>, points: &[Point], is_right: boo
     if is_bottom {
         edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
     }
-    // Only move RIGHT if not at right boundary
-    if !is_right {
-        edges.push(Edge::new(p2.clone(), p0.clone(), Move::Right));
-    } else {
-        edges.push(Edge::new(p2.clone(), p0.clone(), Move::None));
-    }
+    edges.push(Edge::new(p2.clone(), p0.clone(), Move::Right));
 }
 
 // Case 154 | 16 (2122 | 0100) - Top-right triangle
@@ -60,12 +50,7 @@ pub(super) fn triangle_tr(edges: &mut Vec<Edge>, points: &[Point], is_right: boo
     if is_right {
         edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
     }
-    // Only move UP if not at top boundary
-    if !is_top {
-        edges.push(Edge::new(p1.clone(), p2.clone(), Move::Up));
-    } else {
-        edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
-    }
+    edges.push(Edge::new(p1.clone(), p2.clone(), Move::Up));
     if is_top {
         edges.push(Edge::new(p2.clone(), p0.clone(), Move::Right));
     }
@@ -79,12 +64,7 @@ pub(super) fn triangle_tl(edges: &mut Vec<Edge>, points: &[Point], is_left: bool
     let p1 = &points[1];
     let p2 = &points[2];
 
-    // Only move LEFT if not at left boundary
-    if !is_left {
-        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Left));
-    } else {
-        edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
-    }
+    edges.push(Edge::new(p0.clone(), p1.clone(), Move::Left));
     if is_left {
         edges.push(Edge::new(p1.clone(), p2.clone(), Move::Up));
     }

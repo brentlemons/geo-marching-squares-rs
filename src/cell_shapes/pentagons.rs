@@ -11,11 +11,7 @@ pub(super) fn pentagon_101(edges: &mut Vec<Edge>, points: &[Point], is_top: bool
     let p3 = &points[3];
     let p4 = &points[4];
 
-    if !is_right {
-        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
-    } else {
-        edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
-    }
+    edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
     if is_right {
         edges.push(Edge::new(p1.clone(), p2.clone(), Move::Down));
     }
@@ -48,11 +44,7 @@ pub(super) fn pentagon_149(edges: &mut Vec<Edge>, points: &[Point], is_top: bool
     if is_left {
         edges.push(Edge::new(p2.clone(), p3.clone(), Move::None));
     }
-    if !is_top {
-        edges.push(Edge::new(p3.clone(), p4.clone(), Move::Up));
-    } else {
-        edges.push(Edge::new(p3.clone(), p4.clone(), Move::None));
-    }
+    edges.push(Edge::new(p3.clone(), p4.clone(), Move::Up));
     if is_top {
         edges.push(Edge::new(p4.clone(), p0.clone(), Move::Right));
     }
@@ -73,11 +65,7 @@ pub(super) fn pentagon_86(edges: &mut Vec<Edge>, points: &[Point], is_top: bool,
     if is_bottom {
         edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
     }
-    if !is_left {
-        edges.push(Edge::new(p2.clone(), p3.clone(), Move::Left));
-    } else {
-        edges.push(Edge::new(p2.clone(), p3.clone(), Move::None));
-    }
+    edges.push(Edge::new(p2.clone(), p3.clone(), Move::Left));
     if is_left {
         edges.push(Edge::new(p3.clone(), p4.clone(), Move::Up));
     }
@@ -98,11 +86,7 @@ pub(super) fn pentagon_89(edges: &mut Vec<Edge>, points: &[Point], is_top: bool,
     if is_right {
         edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
     }
-    if !is_bottom {
-        edges.push(Edge::new(p1.clone(), p2.clone(), Move::Down));
-    } else {
-        edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
-    }
+    edges.push(Edge::new(p1.clone(), p2.clone(), Move::Down));
     if is_bottom {
         edges.push(Edge::new(p2.clone(), p3.clone(), Move::Left));
     }
@@ -123,19 +107,11 @@ pub(super) fn pentagon_96(edges: &mut Vec<Edge>, points: &[Point], is_top: bool,
     let p3 = &points[3];
     let p4 = &points[4];
 
-    if !is_right {
-        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
-    } else {
-        edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
-    }
+    edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
     if is_right {
         edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
     }
-    if !is_left {
-        edges.push(Edge::new(p2.clone(), p3.clone(), Move::Left));
-    } else {
-        edges.push(Edge::new(p2.clone(), p3.clone(), Move::None));
-    }
+    edges.push(Edge::new(p2.clone(), p3.clone(), Move::Left));
     if is_left {
         edges.push(Edge::new(p3.clone(), p4.clone(), Move::Up));
     }
@@ -156,19 +132,11 @@ pub(super) fn pentagon_24(edges: &mut Vec<Edge>, points: &[Point], is_top: bool,
     if is_right {
         edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
     }
-    if !is_bottom {
-        edges.push(Edge::new(p1.clone(), p2.clone(), Move::Down));
-    } else {
-        edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
-    }
+    edges.push(Edge::new(p1.clone(), p2.clone(), Move::Down));
     if is_bottom {
         edges.push(Edge::new(p2.clone(), p3.clone(), Move::None));
     }
-    if !is_top {
-        edges.push(Edge::new(p3.clone(), p4.clone(), Move::Up));
-    } else {
-        edges.push(Edge::new(p3.clone(), p4.clone(), Move::None));
-    }
+    edges.push(Edge::new(p3.clone(), p4.clone(), Move::Up));
     if is_top {
         edges.push(Edge::new(p4.clone(), p0.clone(), Move::Right));
     }
@@ -189,19 +157,11 @@ pub(super) fn pentagon_6(edges: &mut Vec<Edge>, points: &[Point], is_top: bool, 
     if is_bottom {
         edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
     }
-    if !is_left {
-        edges.push(Edge::new(p2.clone(), p3.clone(), Move::Left));
-    } else {
-        edges.push(Edge::new(p2.clone(), p3.clone(), Move::None));
-    }
+    edges.push(Edge::new(p2.clone(), p3.clone(), Move::Left));
     if is_left {
         edges.push(Edge::new(p3.clone(), p4.clone(), Move::None));
     }
-    if !is_right {
-        edges.push(Edge::new(p4.clone(), p0.clone(), Move::Right));
-    } else {
-        edges.push(Edge::new(p4.clone(), p0.clone(), Move::None));
-    }
+    edges.push(Edge::new(p4.clone(), p0.clone(), Move::Right));
 }
 
 // Case 129 | 41 (2001 | 0221)
@@ -213,22 +173,14 @@ pub(super) fn pentagon_129(edges: &mut Vec<Edge>, points: &[Point], is_top: bool
     let p3 = &points[3];
     let p4 = &points[4];
 
-    if !is_bottom {
-        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Down));
-    } else {
-        edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
-    }
+    edges.push(Edge::new(p0.clone(), p1.clone(), Move::Down));
     if is_bottom {
         edges.push(Edge::new(p1.clone(), p2.clone(), Move::Left));
     }
     if is_left {
         edges.push(Edge::new(p2.clone(), p3.clone(), Move::None));
     }
-    if !is_top {
-        edges.push(Edge::new(p3.clone(), p4.clone(), Move::Up));
-    } else {
-        edges.push(Edge::new(p3.clone(), p4.clone(), Move::None));
-    }
+    edges.push(Edge::new(p3.clone(), p4.clone(), Move::Up));
     if is_top {
         edges.push(Edge::new(p4.clone(), p0.clone(), Move::None));
     }
@@ -243,19 +195,11 @@ pub(super) fn pentagon_66(edges: &mut Vec<Edge>, points: &[Point], is_top: bool,
     let p3 = &points[3];
     let p4 = &points[4];
 
-    if !is_bottom {
-        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Down));
-    } else {
-        edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
-    }
+    edges.push(Edge::new(p0.clone(), p1.clone(), Move::Down));
     if is_bottom {
         edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
     }
-    if !is_left {
-        edges.push(Edge::new(p2.clone(), p3.clone(), Move::Left));
-    } else {
-        edges.push(Edge::new(p2.clone(), p3.clone(), Move::None));
-    }
+    edges.push(Edge::new(p2.clone(), p3.clone(), Move::Left));
     if is_left {
         edges.push(Edge::new(p3.clone(), p4.clone(), Move::Up));
     }
@@ -276,19 +220,11 @@ pub(super) fn pentagon_144(edges: &mut Vec<Edge>, points: &[Point], is_top: bool
     if is_right {
         edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
     }
-    if !is_left {
-        edges.push(Edge::new(p1.clone(), p2.clone(), Move::Left));
-    } else {
-        edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
-    }
+    edges.push(Edge::new(p1.clone(), p2.clone(), Move::Left));
     if is_left {
         edges.push(Edge::new(p2.clone(), p3.clone(), Move::None));
     }
-    if !is_top {
-        edges.push(Edge::new(p3.clone(), p4.clone(), Move::Up));
-    } else {
-        edges.push(Edge::new(p3.clone(), p4.clone(), Move::None));
-    }
+    edges.push(Edge::new(p3.clone(), p4.clone(), Move::Up));
     if is_top {
         edges.push(Edge::new(p4.clone(), p0.clone(), Move::Right));
     }
@@ -303,22 +239,14 @@ pub(super) fn pentagon_36(edges: &mut Vec<Edge>, points: &[Point], is_top: bool,
     let p3 = &points[3];
     let p4 = &points[4];
 
-    if !is_right {
-        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
-    } else {
-        edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
-    }
+    edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
     if is_right {
         edges.push(Edge::new(p1.clone(), p2.clone(), Move::Down));
     }
     if is_bottom {
         edges.push(Edge::new(p2.clone(), p3.clone(), Move::None));
     }
-    if !is_top {
-        edges.push(Edge::new(p3.clone(), p4.clone(), Move::Up));
-    } else {
-        edges.push(Edge::new(p3.clone(), p4.clone(), Move::None));
-    }
+    edges.push(Edge::new(p3.clone(), p4.clone(), Move::Up));
     if is_top {
         edges.push(Edge::new(p4.clone(), p0.clone(), Move::None));
     }
@@ -336,20 +264,12 @@ pub(super) fn pentagon_9(edges: &mut Vec<Edge>, points: &[Point], is_top: bool, 
     if is_right {
         edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
     }
-    if !is_bottom {
-        edges.push(Edge::new(p1.clone(), p2.clone(), Move::Down));
-    } else {
-        edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
-    }
+    edges.push(Edge::new(p1.clone(), p2.clone(), Move::Down));
     if is_bottom {
         edges.push(Edge::new(p2.clone(), p3.clone(), Move::Left));
     }
     if is_left {
         edges.push(Edge::new(p3.clone(), p4.clone(), Move::None));
     }
-    if !is_right {
-        edges.push(Edge::new(p4.clone(), p0.clone(), Move::Right));
-    } else {
-        edges.push(Edge::new(p4.clone(), p0.clone(), Move::None));
-    }
+    edges.push(Edge::new(p4.clone(), p0.clone(), Move::Right));
 }

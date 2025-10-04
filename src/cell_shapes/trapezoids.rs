@@ -13,19 +13,11 @@ pub(super) fn trapezoid_168(edges: &mut Vec<Edge>, points: &[Point], is_top: boo
     if is_bottom {
         edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
     }
-    if !is_left {
-        edges.push(Edge::new(p1.clone(), p2.clone(), Move::Left));
-    } else {
-        edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
-    }
+    edges.push(Edge::new(p1.clone(), p2.clone(), Move::Left));
     if is_left {
         edges.push(Edge::new(p2.clone(), p3.clone(), Move::None));
     }
-    if !is_bottom {
-        edges.push(Edge::new(p3.clone(), p0.clone(), Move::Down));
-    } else {
-        edges.push(Edge::new(p3.clone(), p0.clone(), Move::None));
-    }
+    edges.push(Edge::new(p3.clone(), p0.clone(), Move::Down));
 }
 
 // Case 162 | 8 (2202 | 0020)
@@ -39,19 +31,11 @@ pub(super) fn trapezoid_162(edges: &mut Vec<Edge>, points: &[Point], is_top: boo
     if is_right {
         edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
     }
-    if !is_bottom {
-        edges.push(Edge::new(p1.clone(), p2.clone(), Move::Down));
-    } else {
-        edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
-    }
+    edges.push(Edge::new(p1.clone(), p2.clone(), Move::Down));
     if is_bottom {
         edges.push(Edge::new(p2.clone(), p3.clone(), Move::None));
     }
-    if !is_right {
-        edges.push(Edge::new(p3.clone(), p0.clone(), Move::Right));
-    } else {
-        edges.push(Edge::new(p3.clone(), p0.clone(), Move::None));
-    }
+    edges.push(Edge::new(p3.clone(), p0.clone(), Move::Right));
 }
 
 // Case 138 | 32 (2022 | 0200)
@@ -62,19 +46,11 @@ pub(super) fn trapezoid_138(edges: &mut Vec<Edge>, points: &[Point], is_top: boo
     let p2 = &points[2];
     let p3 = &points[3];
 
-    if !is_right {
-        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
-    } else {
-        edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
-    }
+    edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
     if is_right {
         edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
     }
-    if !is_top {
-        edges.push(Edge::new(p2.clone(), p3.clone(), Move::Up));
-    } else {
-        edges.push(Edge::new(p2.clone(), p3.clone(), Move::None));
-    }
+    edges.push(Edge::new(p2.clone(), p3.clone(), Move::Up));
     if is_top {
         edges.push(Edge::new(p3.clone(), p0.clone(), Move::None));
     }
@@ -88,19 +64,11 @@ pub(super) fn trapezoid_42(edges: &mut Vec<Edge>, points: &[Point], is_top: bool
     let p2 = &points[2];
     let p3 = &points[3];
 
-    if !is_left {
-        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Left));
-    } else {
-        edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
-    }
+    edges.push(Edge::new(p0.clone(), p1.clone(), Move::Left));
     if is_left {
         edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
     }
-    if !is_top {
-        edges.push(Edge::new(p2.clone(), p3.clone(), Move::Up));
-    } else {
-        edges.push(Edge::new(p2.clone(), p3.clone(), Move::None));
-    }
+    edges.push(Edge::new(p2.clone(), p3.clone(), Move::Up));
     if is_top {
         edges.push(Edge::new(p3.clone(), p0.clone(), Move::None));
     }
