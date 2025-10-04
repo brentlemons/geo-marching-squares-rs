@@ -3,13 +3,22 @@
 use serde::{Deserialize, Serialize};
 use std::hash::{Hash, Hasher};
 
-/// Round coordinate to 6 decimal places (~111mm precision at equator)
-/// This helps edge tracing by ensuring consistent coordinate values
+/// Round coordinate to 5 decimal places (~1.1 meter precision at equator)
+/// This matches the Java implementation (positionAccuracy = 5)
+/// Uses HALF_UP rounding strategy to match Java's BigDecimal.setScale(5, RoundingMode.HALF_UP)
 ///
-/// IMPORTANT: Should be applied AFTER coordinate transformation to ensure
-/// all points (grid corners and interpolated edges) are consistently rounded
+/// IMPORTANT: Only applied at final GeoJSON output, NOT during interpolation.
+/// This ensures adjacent cells compute identical edge endpoints during tracing.
 pub fn round_coordinate(coord: f64) -> f64 {
-    (coord * 1_000_000.0).round() / 1_000_000.0
+    // HALF_UP: Round 0.5 away from zero (matches Java's HALF_UP)
+    let multiplier = 100_000.0; // 5 decimal places
+    let shifted = coord * multiplier;
+    let rounded = if shifted >= 0.0 {
+        (shifted + 0.5).floor()
+    } else {
+        (shifted - 0.5).ceil()
+    };
+    rounded / multiplier
 }
 
 /// A point with geographic coordinates and a data value
@@ -81,23 +90,21 @@ impl From<GridPoint> for Point {
 }
 
 // Implement Hash and Eq for Point to enable HashMap usage
-// We round to 6 decimal places (matching GeoJSON output precision) to ensure
-// that points which are "equal" within epsilon hash to the same value
+// Uses bitwise equality to match Java's Double.equals() behavior
+// This ensures exact matching for edge lookups in the HashMap
 impl Hash for Point {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        // Round to 6 decimals to match GeoJSON output precision
-        // This ensures points that are "equal" hash the same
-        let x_rounded = (self.x * 1_000_000.0).round() as i64;
-        let y_rounded = (self.y * 1_000_000.0).round() as i64;
-        x_rounded.hash(state);
-        y_rounded.hash(state);
+        // Use exact bit patterns for hashing (matches Java Double.hashCode())
+        self.x.to_bits().hash(state);
+        self.y.to_bits().hash(state);
     }
 }
 
 impl PartialEq for Point {
     fn eq(&self, other: &Self) -> bool {
-        const EPSILON: f64 = 1e-6;
-        (self.x - other.x).abs() < EPSILON && (self.y - other.y).abs() < EPSILON
+        // Exact bitwise equality to match Java's Double.equals()
+        // This ensures HashMap lookups work correctly for edge tracing
+        self.x.to_bits() == other.x.to_bits() && self.y.to_bits() == other.y.to_bits()
     }
 }
 

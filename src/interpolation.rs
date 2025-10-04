@@ -57,10 +57,10 @@ pub fn interpolate_point(
     // Handle degenerate case where value0 == value1
     let value_diff = value1 - value0;
     if value_diff.abs() < 1e-10 {
-        // No gradient - return rounded midpoint
+        // No gradient - return midpoint (full precision, matches Java)
         return Point::from_lon_lat(
-            crate::types::round_coordinate((point0.x + point1.x) / 2.0),
-            crate::types::round_coordinate((point0.y + point1.y) / 2.0),
+            (point0.x + point1.x) / 2.0,
+            (point0.y + point1.y) / 2.0,
         );
     }
 
@@ -78,12 +78,9 @@ pub fn interpolate_point(
     let x = (1.0 - new_mu) * point0.x + new_mu * point1.x;
     let y = (1.0 - new_mu) * point0.y + new_mu * point1.y;
 
-    // Round coordinates for consistency in edge tracing
-    // This ensures adjacent cells create identical edge endpoints
-    Point::from_lon_lat(
-        crate::types::round_coordinate(x),
-        crate::types::round_coordinate(y)
-    )
+    // Return full precision coordinates - rounding only happens at GeoJSON output
+    // This matches Java behavior and ensures adjacent cells compute identical edge endpoints
+    Point::from_lon_lat(x, y)
 }
 
 /// Interpolates a point along a specific side of a grid cell.
@@ -187,10 +184,10 @@ pub fn interpolate_point_great_circle(
     // Handle degenerate case where value0 == value1
     let value_diff = value1 - value0;
     if value_diff.abs() < 1e-10 {
-        // No gradient - return rounded midpoint
+        // No gradient - return midpoint (full precision, matches Java)
         return Point::from_lon_lat(
-            crate::types::round_coordinate((point0.x + point1.x) / 2.0),
-            crate::types::round_coordinate((point0.y + point1.y) / 2.0),
+            (point0.x + point1.x) / 2.0,
+            (point0.y + point1.y) / 2.0,
         );
     }
 
@@ -219,10 +216,7 @@ pub fn interpolate_point_great_circle(
         // Points are too close or antipodal - fall back to linear interpolation
         let x = (1.0 - new_mu) * point0.x + new_mu * point1.x;
         let y = (1.0 - new_mu) * point0.y + new_mu * point1.y;
-        return Point::from_lon_lat(
-            crate::types::round_coordinate(x),
-            crate::types::round_coordinate(y)
-        );
+        return Point::from_lon_lat(x, y);
     }
 
     // Interpolate along great circle
@@ -236,12 +230,8 @@ pub fn interpolate_point_great_circle(
     let lat = z.atan2((x * x + y * y).sqrt());
     let lon = y.atan2(x);
 
-    // Round coordinates for consistency in edge tracing
-    // This ensures adjacent cells create identical edge endpoints
-    Point::from_lon_lat(
-        crate::types::round_coordinate(lon.to_degrees()),
-        crate::types::round_coordinate(lat.to_degrees())
-    )
+    // Return full precision coordinates - rounding only happens at GeoJSON output
+    Point::from_lon_lat(lon.to_degrees(), lat.to_degrees())
 }
 
 #[cfg(test)]

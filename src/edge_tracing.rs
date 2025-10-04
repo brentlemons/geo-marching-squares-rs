@@ -86,12 +86,12 @@ impl CellWithEdges {
     }
 }
 
-/// Compare two points with floating point tolerance
-/// Using 1e-6 (about 0.1 meters at equator) for geographic coordinate comparisons
-/// after PROJ transformations which can introduce small numerical differences
+/// Compare two points for exact equality (matches Java Double.equals())
+/// Since we now use full-precision coordinates during edge tracing,
+/// adjacent cells will compute identical edge endpoints bitwise.
 fn points_equal(p1: &Point, p2: &Point) -> bool {
-    const EPSILON: f64 = 1e-6;
-    (p1.x - p2.x).abs() < EPSILON && (p1.y - p2.y).abs() < EPSILON
+    // Use PartialEq which now does exact bitwise comparison
+    p1 == p2
 }
 
 /// Trace a single polygon ring starting from a cell
