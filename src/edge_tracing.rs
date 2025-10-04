@@ -100,10 +100,11 @@ impl CellWithEdges {
 /// bitwise identical coordinates. We need epsilon comparison to detect when
 /// edge endpoints from different cells represent the same geographic location.
 ///
-/// Using 1e-10 tolerance (~0.1mm at equator) to match coordinates that should
-/// be identical but have minor floating point differences.
+/// Using 1e-6 tolerance (~10cm at equator) to match coordinates that should
+/// be identical but have minor floating point differences. This is far more
+/// than sufficient for 3km grid resolution weather data.
 fn points_equal(p1: &Point, p2: &Point) -> bool {
-    const EPSILON: f64 = 1e-10;
+    const EPSILON: f64 = 1e-6;
     (p1.x - p2.x).abs() < EPSILON && (p1.y - p2.y).abs() < EPSILON
 }
 
