@@ -756,8 +756,20 @@ pub fn generate_isobands_phase2(grid: &GeoGrid, lower: f64, upper: f64) -> Resul
     // Convert to GeoJSON MultiPolygon
     let multi_polygon: Vec<Vec<Vec<Vec<f64>>>> = organized
         .into_iter()
-        .map(|(exterior, holes)| {
+        .enumerate()
+        .map(|(poly_idx, (exterior, holes))| {
             let mut polygon_rings = Vec::new();
+
+            // Debug: Check exterior ring BEFORE rounding
+            for i in 0..exterior.len().saturating_sub(1) {
+                let p1 = &exterior[i];
+                let p2 = &exterior[i + 1];
+                let seg_len = ((p2.x - p1.x).powi(2) + (p2.y - p1.y).powi(2)).sqrt();
+                if seg_len > 10.0 {
+                    eprintln!("🚨 LONG SEGMENT BEFORE ROUNDING in polygon {}: segment {} from ({:.6},{:.6}) to ({:.6},{:.6}), length={:.2}°",
+                        poly_idx, i, p1.x, p1.y, p2.x, p2.y, seg_len);
+                }
+            }
 
             // Add exterior ring (must be closed for GeoJSON)
             let mut exterior_coords: Vec<Vec<f64>> = exterior
@@ -767,8 +779,32 @@ pub fn generate_isobands_phase2(grid: &GeoGrid, lower: f64, upper: f64) -> Resul
                     crate::types::round_coordinate(p.y)
                 ])
                 .collect();
+
+            // Debug: Check AFTER rounding but BEFORE closing
+            for i in 0..exterior_coords.len().saturating_sub(1) {
+                let p1 = &exterior_coords[i];
+                let p2 = &exterior_coords[i + 1];
+                let dx = p2[0] - p1[0];
+                let dy = p2[1] - p1[1];
+                let seg_len = (dx * dx + dy * dy).sqrt();
+                if seg_len > 10.0 {
+                    eprintln!("🚨 LONG SEGMENT AFTER ROUNDING (before close) in polygon {}: segment {} from ({:.6},{:.6}) to ({:.6},{:.6}), length={:.2}°",
+                        poly_idx, i, p1[0], p1[1], p2[0], p2[1], seg_len);
+                }
+            }
+
             // Close the ring by duplicating the first point
             if let Some(first) = exterior_coords.first().cloned() {
+                // Debug: Check the closing segment
+                if let Some(last) = exterior_coords.last() {
+                    let dx = first[0] - last[0];
+                    let dy = first[1] - last[1];
+                    let close_len = (dx * dx + dy * dy).sqrt();
+                    if close_len > 10.0 {
+                        eprintln!("🚨 LONG CLOSING SEGMENT in polygon {}: last ({:.6},{:.6}) to first ({:.6},{:.6}), length={:.2}°",
+                            poly_idx, last[0], last[1], first[0], first[1], close_len);
+                    }
+                }
                 exterior_coords.push(first);
             }
             polygon_rings.push(exterior_coords);
