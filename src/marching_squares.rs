@@ -723,10 +723,10 @@ pub fn generate_isobands_phase2(grid: &GeoGrid, lower: f64, upper: f64) -> Resul
             );
 
             if let Some(shape) = shape_opt {
-                // Debug boundary cells
-                if is_top || is_right || is_bottom || is_left {
-                    eprintln!("🔍 BOUNDARY CELL ({},{}) config={} bounds=[T:{} R:{} B:{} L:{}] edges={}",
-                        row, col, config, is_top, is_right, is_bottom, is_left, shape.edges.len());
+                // Debug TOP boundary cells only, and only first 20 columns
+                if is_top && col < 20 {
+                    eprintln!("🔍 TOP BOUNDARY ({},{}) config={} tl={:.2} tr={:.2} br={:.2} bl={:.2} edges={}",
+                        row, col, config, tl.value, tr.value, br.value, bl.value, shape.edges.len());
                     for (start, edge) in &shape.edges {
                         eprintln!("   Edge: ({:.3},{:.3}) -> ({:.3},{:.3}) move={:?}",
                             start.x, start.y, edge.end.x, edge.end.y, edge.move_dir);

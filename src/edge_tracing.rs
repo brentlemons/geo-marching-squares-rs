@@ -134,6 +134,12 @@ pub fn trace_ring(
     let mut iterations = 0;
     const MAX_ITERATIONS: usize = 10000;
 
+    // Debug tracing if we start at row 0 (top boundary)
+    let debug_trace = start_row == 0 && start_col < 20;
+    if debug_trace {
+        eprintln!("🎯 Starting trace at TOP BOUNDARY cell ({},{})", start_row, start_col);
+    }
+
     // Java: while (goOn && !cells[y][x].getEdges(...).isEmpty())
     while go_on {
         iterations += 1;
@@ -195,6 +201,8 @@ pub fn trace_ring(
         // Java relies on short-circuit evaluation of the while condition to avoid
         // accessing out-of-bounds cells when goOn is false
         if let Some(ref edge) = current_edge {
+            let old_row = current_row;
+            let old_col = current_col;
             match edge.move_dir {
                 crate::types::Move::Right => {
                     current_col += 1;
@@ -212,6 +220,10 @@ pub fn trace_ring(
                     // Edge stays in same cell
                     // Continue with while loop
                 }
+            }
+            if debug_trace {
+                eprintln!("   Move {:?}: ({},{}) -> ({},{}) go_on={}",
+                    edge.move_dir, old_row, old_col, current_row, current_col, go_on);
             }
         }
 
