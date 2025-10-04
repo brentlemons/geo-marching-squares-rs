@@ -760,6 +760,16 @@ pub fn generate_isobands_phase2(grid: &GeoGrid, lower: f64, upper: f64) -> Resul
         .map(|(poly_idx, (exterior, holes))| {
             let mut polygon_rings = Vec::new();
 
+            // Debug: Check if ring is actually closed before we do anything
+            if let (Some(first), Some(last)) = (exterior.first(), exterior.last()) {
+                let is_closed = first.x == last.x && first.y == last.y;
+                if !is_closed {
+                    eprintln!("🚨 POLYGON {} NOT CLOSED from trace_ring! first=({:.12},{:.12}) last=({:.12},{:.12}), dist={:.6}",
+                        poly_idx, first.x, first.y, last.x, last.y,
+                        ((last.x - first.x).powi(2) + (last.y - first.y).powi(2)).sqrt());
+                }
+            }
+
             // CRITICAL FIX: Close the ring BEFORE rounding to ensure first == last after rounding
             // trace_ring returns rings where first and last are bitwise identical.
             // If we round first, they may round to different values, creating diagonal artifacts.
