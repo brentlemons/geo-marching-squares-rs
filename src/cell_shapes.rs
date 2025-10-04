@@ -254,7 +254,12 @@ fn triangle_bl(edges: &mut Vec<Edge>, points: &[Point], is_bottom: bool, is_left
     if is_left {
         edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
     }
-    edges.push(Edge::new(p2.clone(), p0.clone(), Move::Down));
+    // Only move DOWN if not at bottom boundary
+    if !is_bottom {
+        edges.push(Edge::new(p2.clone(), p0.clone(), Move::Down));
+    } else {
+        edges.push(Edge::new(p2.clone(), p0.clone(), Move::None));
+    }
 }
 
 // Case 166 | 4 (2212 | 0010) - Bottom-right triangle
@@ -271,7 +276,12 @@ fn triangle_br(edges: &mut Vec<Edge>, points: &[Point], is_right: bool, is_botto
     if is_bottom {
         edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
     }
-    edges.push(Edge::new(p2.clone(), p0.clone(), Move::Right));
+    // Only move RIGHT if not at right boundary
+    if !is_right {
+        edges.push(Edge::new(p2.clone(), p0.clone(), Move::Right));
+    } else {
+        edges.push(Edge::new(p2.clone(), p0.clone(), Move::None));
+    }
 }
 
 // Case 154 | 16 (2122 | 0100) - Top-right triangle
@@ -285,7 +295,12 @@ fn triangle_tr(edges: &mut Vec<Edge>, points: &[Point], is_right: bool, is_top: 
     if is_right {
         edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
     }
-    edges.push(Edge::new(p1.clone(), p2.clone(), Move::Up));
+    // Only move UP if not at top boundary
+    if !is_top {
+        edges.push(Edge::new(p1.clone(), p2.clone(), Move::Up));
+    } else {
+        edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
+    }
     if is_top {
         edges.push(Edge::new(p2.clone(), p0.clone(), Move::Right));
     }
@@ -299,7 +314,12 @@ fn triangle_tl(edges: &mut Vec<Edge>, points: &[Point], is_left: bool, is_top: b
     let p1 = &points[1];
     let p2 = &points[2];
 
-    edges.push(Edge::new(p0.clone(), p1.clone(), Move::Left));
+    // Only move LEFT if not at left boundary
+    if !is_left {
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Left));
+    } else {
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
+    }
     if is_left {
         edges.push(Edge::new(p1.clone(), p2.clone(), Move::Up));
     }
@@ -321,7 +341,11 @@ fn pentagon_101(edges: &mut Vec<Edge>, points: &[Point], is_top: bool, is_right:
     let p3 = &points[3];
     let p4 = &points[4];
 
-    edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
+    if !is_right {
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
+    } else {
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
+    }
     if is_right {
         edges.push(Edge::new(p1.clone(), p2.clone(), Move::Down));
     }
@@ -354,7 +378,11 @@ fn pentagon_149(edges: &mut Vec<Edge>, points: &[Point], is_top: bool, is_right:
     if is_left {
         edges.push(Edge::new(p2.clone(), p3.clone(), Move::None));
     }
-    edges.push(Edge::new(p3.clone(), p4.clone(), Move::Up));
+    if !is_top {
+        edges.push(Edge::new(p3.clone(), p4.clone(), Move::Up));
+    } else {
+        edges.push(Edge::new(p3.clone(), p4.clone(), Move::None));
+    }
     if is_top {
         edges.push(Edge::new(p4.clone(), p0.clone(), Move::Right));
     }
@@ -375,7 +403,11 @@ fn pentagon_86(edges: &mut Vec<Edge>, points: &[Point], is_top: bool, is_right: 
     if is_bottom {
         edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
     }
-    edges.push(Edge::new(p2.clone(), p3.clone(), Move::Left));
+    if !is_left {
+        edges.push(Edge::new(p2.clone(), p3.clone(), Move::Left));
+    } else {
+        edges.push(Edge::new(p2.clone(), p3.clone(), Move::None));
+    }
     if is_left {
         edges.push(Edge::new(p3.clone(), p4.clone(), Move::Up));
     }
@@ -396,7 +428,11 @@ fn pentagon_89(edges: &mut Vec<Edge>, points: &[Point], is_top: bool, is_right: 
     if is_right {
         edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
     }
-    edges.push(Edge::new(p1.clone(), p2.clone(), Move::Down));
+    if !is_bottom {
+        edges.push(Edge::new(p1.clone(), p2.clone(), Move::Down));
+    } else {
+        edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
+    }
     if is_bottom {
         edges.push(Edge::new(p2.clone(), p3.clone(), Move::Left));
     }
@@ -417,11 +453,19 @@ fn pentagon_96(edges: &mut Vec<Edge>, points: &[Point], is_top: bool, is_right: 
     let p3 = &points[3];
     let p4 = &points[4];
 
-    edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
+    if !is_right {
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
+    } else {
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
+    }
     if is_right {
         edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
     }
-    edges.push(Edge::new(p2.clone(), p3.clone(), Move::Left));
+    if !is_left {
+        edges.push(Edge::new(p2.clone(), p3.clone(), Move::Left));
+    } else {
+        edges.push(Edge::new(p2.clone(), p3.clone(), Move::None));
+    }
     if is_left {
         edges.push(Edge::new(p3.clone(), p4.clone(), Move::Up));
     }
@@ -442,11 +486,19 @@ fn pentagon_24(edges: &mut Vec<Edge>, points: &[Point], is_top: bool, is_right: 
     if is_right {
         edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
     }
-    edges.push(Edge::new(p1.clone(), p2.clone(), Move::Down));
+    if !is_bottom {
+        edges.push(Edge::new(p1.clone(), p2.clone(), Move::Down));
+    } else {
+        edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
+    }
     if is_bottom {
         edges.push(Edge::new(p2.clone(), p3.clone(), Move::None));
     }
-    edges.push(Edge::new(p3.clone(), p4.clone(), Move::Up));
+    if !is_top {
+        edges.push(Edge::new(p3.clone(), p4.clone(), Move::Up));
+    } else {
+        edges.push(Edge::new(p3.clone(), p4.clone(), Move::None));
+    }
     if is_top {
         edges.push(Edge::new(p4.clone(), p0.clone(), Move::Right));
     }
@@ -467,11 +519,19 @@ fn pentagon_6(edges: &mut Vec<Edge>, points: &[Point], is_top: bool, is_right: b
     if is_bottom {
         edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
     }
-    edges.push(Edge::new(p2.clone(), p3.clone(), Move::Left));
+    if !is_left {
+        edges.push(Edge::new(p2.clone(), p3.clone(), Move::Left));
+    } else {
+        edges.push(Edge::new(p2.clone(), p3.clone(), Move::None));
+    }
     if is_left {
         edges.push(Edge::new(p3.clone(), p4.clone(), Move::None));
     }
-    edges.push(Edge::new(p4.clone(), p0.clone(), Move::Right));
+    if !is_right {
+        edges.push(Edge::new(p4.clone(), p0.clone(), Move::Right));
+    } else {
+        edges.push(Edge::new(p4.clone(), p0.clone(), Move::None));
+    }
 }
 
 // Case 129 | 41 (2001 | 0221)
@@ -483,14 +543,22 @@ fn pentagon_129(edges: &mut Vec<Edge>, points: &[Point], is_top: bool, is_right:
     let p3 = &points[3];
     let p4 = &points[4];
 
-    edges.push(Edge::new(p0.clone(), p1.clone(), Move::Down));
+    if !is_bottom {
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Down));
+    } else {
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
+    }
     if is_bottom {
         edges.push(Edge::new(p1.clone(), p2.clone(), Move::Left));
     }
     if is_left {
         edges.push(Edge::new(p2.clone(), p3.clone(), Move::None));
     }
-    edges.push(Edge::new(p3.clone(), p4.clone(), Move::Up));
+    if !is_top {
+        edges.push(Edge::new(p3.clone(), p4.clone(), Move::Up));
+    } else {
+        edges.push(Edge::new(p3.clone(), p4.clone(), Move::None));
+    }
     if is_top {
         edges.push(Edge::new(p4.clone(), p0.clone(), Move::None));
     }
@@ -505,11 +573,19 @@ fn pentagon_66(edges: &mut Vec<Edge>, points: &[Point], is_top: bool, is_right: 
     let p3 = &points[3];
     let p4 = &points[4];
 
-    edges.push(Edge::new(p0.clone(), p1.clone(), Move::Down));
+    if !is_bottom {
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Down));
+    } else {
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
+    }
     if is_bottom {
         edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
     }
-    edges.push(Edge::new(p2.clone(), p3.clone(), Move::Left));
+    if !is_left {
+        edges.push(Edge::new(p2.clone(), p3.clone(), Move::Left));
+    } else {
+        edges.push(Edge::new(p2.clone(), p3.clone(), Move::None));
+    }
     if is_left {
         edges.push(Edge::new(p3.clone(), p4.clone(), Move::Up));
     }
@@ -530,11 +606,19 @@ fn pentagon_144(edges: &mut Vec<Edge>, points: &[Point], is_top: bool, is_right:
     if is_right {
         edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
     }
-    edges.push(Edge::new(p1.clone(), p2.clone(), Move::Left));
+    if !is_left {
+        edges.push(Edge::new(p1.clone(), p2.clone(), Move::Left));
+    } else {
+        edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
+    }
     if is_left {
         edges.push(Edge::new(p2.clone(), p3.clone(), Move::None));
     }
-    edges.push(Edge::new(p3.clone(), p4.clone(), Move::Up));
+    if !is_top {
+        edges.push(Edge::new(p3.clone(), p4.clone(), Move::Up));
+    } else {
+        edges.push(Edge::new(p3.clone(), p4.clone(), Move::None));
+    }
     if is_top {
         edges.push(Edge::new(p4.clone(), p0.clone(), Move::Right));
     }
@@ -549,14 +633,22 @@ fn pentagon_36(edges: &mut Vec<Edge>, points: &[Point], is_top: bool, is_right: 
     let p3 = &points[3];
     let p4 = &points[4];
 
-    edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
+    if !is_right {
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
+    } else {
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
+    }
     if is_right {
         edges.push(Edge::new(p1.clone(), p2.clone(), Move::Down));
     }
     if is_bottom {
         edges.push(Edge::new(p2.clone(), p3.clone(), Move::None));
     }
-    edges.push(Edge::new(p3.clone(), p4.clone(), Move::Up));
+    if !is_top {
+        edges.push(Edge::new(p3.clone(), p4.clone(), Move::Up));
+    } else {
+        edges.push(Edge::new(p3.clone(), p4.clone(), Move::None));
+    }
     if is_top {
         edges.push(Edge::new(p4.clone(), p0.clone(), Move::None));
     }
@@ -574,14 +666,22 @@ fn pentagon_9(edges: &mut Vec<Edge>, points: &[Point], is_top: bool, is_right: b
     if is_right {
         edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
     }
-    edges.push(Edge::new(p1.clone(), p2.clone(), Move::Down));
+    if !is_bottom {
+        edges.push(Edge::new(p1.clone(), p2.clone(), Move::Down));
+    } else {
+        edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
+    }
     if is_bottom {
         edges.push(Edge::new(p2.clone(), p3.clone(), Move::Left));
     }
     if is_left {
         edges.push(Edge::new(p3.clone(), p4.clone(), Move::None));
     }
-    edges.push(Edge::new(p4.clone(), p0.clone(), Move::Right));
+    if !is_right {
+        edges.push(Edge::new(p4.clone(), p0.clone(), Move::Right));
+    } else {
+        edges.push(Edge::new(p4.clone(), p0.clone(), Move::None));
+    }
 }
 
 // ============================================================================
@@ -605,7 +705,11 @@ fn rectangle_5(edges: &mut Vec<Edge>, points: &[Point], is_top: bool, is_right: 
     if is_left {
         edges.push(Edge::new(p2.clone(), p3.clone(), Move::None));
     }
-    edges.push(Edge::new(p3.clone(), p0.clone(), Move::Right));
+    if !is_right {
+        edges.push(Edge::new(p3.clone(), p0.clone(), Move::Right));
+    } else {
+        edges.push(Edge::new(p3.clone(), p0.clone(), Move::None));
+    }
 }
 
 // Case 20 | 150 (0110 | 2112)
@@ -622,7 +726,12 @@ fn rectangle_20(edges: &mut Vec<Edge>, points: &[Point], is_top: bool, is_right:
     if is_bottom {
         edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
     }
-    edges.push(Edge::new(p2.clone(), p3.clone(), Move::Up));
+    // Only move UP if not at top boundary
+    if !is_top {
+        edges.push(Edge::new(p2.clone(), p3.clone(), Move::Up));
+    } else {
+        edges.push(Edge::new(p2.clone(), p3.clone(), Move::None));
+    }
     if is_top {
         edges.push(Edge::new(p3.clone(), p0.clone(), Move::Right));
     }
@@ -639,7 +748,12 @@ fn rectangle_80(edges: &mut Vec<Edge>, points: &[Point], is_top: bool, is_right:
     if is_right {
         edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
     }
-    edges.push(Edge::new(p1.clone(), p2.clone(), Move::Left));
+    // Only move LEFT if not at left boundary
+    if !is_left {
+        edges.push(Edge::new(p1.clone(), p2.clone(), Move::Left));
+    } else {
+        edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
+    }
     if is_left {
         edges.push(Edge::new(p2.clone(), p3.clone(), Move::Up));
     }
@@ -656,7 +770,11 @@ fn rectangle_65(edges: &mut Vec<Edge>, points: &[Point], is_top: bool, is_right:
     let p2 = &points[2];
     let p3 = &points[3];
 
-    edges.push(Edge::new(p0.clone(), p1.clone(), Move::Down));
+    if !is_bottom {
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Down));
+    } else {
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
+    }
     if is_bottom {
         edges.push(Edge::new(p1.clone(), p2.clone(), Move::Left));
     }
@@ -679,11 +797,19 @@ fn rectangle_160(edges: &mut Vec<Edge>, points: &[Point], is_top: bool, is_right
     if is_right {
         edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
     }
-    edges.push(Edge::new(p1.clone(), p2.clone(), Move::Left));
+    if !is_left {
+        edges.push(Edge::new(p1.clone(), p2.clone(), Move::Left));
+    } else {
+        edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
+    }
     if is_left {
         edges.push(Edge::new(p2.clone(), p3.clone(), Move::None));
     }
-    edges.push(Edge::new(p3.clone(), p0.clone(), Move::Right));
+    if !is_right {
+        edges.push(Edge::new(p3.clone(), p0.clone(), Move::Right));
+    } else {
+        edges.push(Edge::new(p3.clone(), p0.clone(), Move::None));
+    }
 }
 
 // Case 130 | 40 (2002 | 0220)
@@ -694,11 +820,19 @@ fn rectangle_130(edges: &mut Vec<Edge>, points: &[Point], is_top: bool, is_right
     let p2 = &points[2];
     let p3 = &points[3];
 
-    edges.push(Edge::new(p0.clone(), p1.clone(), Move::Down));
+    if !is_bottom {
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Down));
+    } else {
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
+    }
     if is_bottom {
         edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
     }
-    edges.push(Edge::new(p2.clone(), p3.clone(), Move::Up));
+    if !is_top {
+        edges.push(Edge::new(p2.clone(), p3.clone(), Move::Up));
+    } else {
+        edges.push(Edge::new(p2.clone(), p3.clone(), Move::None));
+    }
     if is_top {
         edges.push(Edge::new(p3.clone(), p0.clone(), Move::None));
     }
@@ -719,11 +853,19 @@ fn trapezoid_168(edges: &mut Vec<Edge>, points: &[Point], is_top: bool, is_right
     if is_bottom {
         edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
     }
-    edges.push(Edge::new(p1.clone(), p2.clone(), Move::Left));
+    if !is_left {
+        edges.push(Edge::new(p1.clone(), p2.clone(), Move::Left));
+    } else {
+        edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
+    }
     if is_left {
         edges.push(Edge::new(p2.clone(), p3.clone(), Move::None));
     }
-    edges.push(Edge::new(p3.clone(), p0.clone(), Move::Down));
+    if !is_bottom {
+        edges.push(Edge::new(p3.clone(), p0.clone(), Move::Down));
+    } else {
+        edges.push(Edge::new(p3.clone(), p0.clone(), Move::None));
+    }
 }
 
 // Case 162 | 8 (2202 | 0020)
@@ -737,11 +879,19 @@ fn trapezoid_162(edges: &mut Vec<Edge>, points: &[Point], is_top: bool, is_right
     if is_right {
         edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
     }
-    edges.push(Edge::new(p1.clone(), p2.clone(), Move::Down));
+    if !is_bottom {
+        edges.push(Edge::new(p1.clone(), p2.clone(), Move::Down));
+    } else {
+        edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
+    }
     if is_bottom {
         edges.push(Edge::new(p2.clone(), p3.clone(), Move::None));
     }
-    edges.push(Edge::new(p3.clone(), p0.clone(), Move::Right));
+    if !is_right {
+        edges.push(Edge::new(p3.clone(), p0.clone(), Move::Right));
+    } else {
+        edges.push(Edge::new(p3.clone(), p0.clone(), Move::None));
+    }
 }
 
 // Case 138 | 32 (2022 | 0200)
@@ -752,11 +902,19 @@ fn trapezoid_138(edges: &mut Vec<Edge>, points: &[Point], is_top: bool, is_right
     let p2 = &points[2];
     let p3 = &points[3];
 
-    edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
+    if !is_right {
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
+    } else {
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
+    }
     if is_right {
         edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
     }
-    edges.push(Edge::new(p2.clone(), p3.clone(), Move::Up));
+    if !is_top {
+        edges.push(Edge::new(p2.clone(), p3.clone(), Move::Up));
+    } else {
+        edges.push(Edge::new(p2.clone(), p3.clone(), Move::None));
+    }
     if is_top {
         edges.push(Edge::new(p3.clone(), p0.clone(), Move::None));
     }
@@ -770,11 +928,19 @@ fn trapezoid_42(edges: &mut Vec<Edge>, points: &[Point], is_top: bool, is_right:
     let p2 = &points[2];
     let p3 = &points[3];
 
-    edges.push(Edge::new(p0.clone(), p1.clone(), Move::Left));
+    if !is_left {
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Left));
+    } else {
+        edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
+    }
     if is_left {
         edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
     }
-    edges.push(Edge::new(p2.clone(), p3.clone(), Move::Up));
+    if !is_top {
+        edges.push(Edge::new(p2.clone(), p3.clone(), Move::Up));
+    } else {
+        edges.push(Edge::new(p2.clone(), p3.clone(), Move::None));
+    }
     if is_top {
         edges.push(Edge::new(p3.clone(), p0.clone(), Move::None));
     }
@@ -788,11 +954,11 @@ fn trapezoid_42(edges: &mut Vec<Edge>, points: &[Point], is_top: bool, is_right:
 fn hexagon_37(edges: &mut Vec<Edge>, points: &[Point], is_top: bool, is_right: bool, is_bottom: bool, is_left: bool) {
     if points.len() < 6 { return; }
     let (p0, p1, p2, p3, p4, p5) = (&points[0], &points[1], &points[2], &points[3], &points[4], &points[5]);
-    edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
+    if !is_right { edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right)); } else { edges.push(Edge::new(p0.clone(), p1.clone(), Move::None)); }
     if is_right { edges.push(Edge::new(p1.clone(), p2.clone(), Move::Down)); }
     if is_bottom { edges.push(Edge::new(p2.clone(), p3.clone(), Move::Left)); }
     if is_left { edges.push(Edge::new(p3.clone(), p4.clone(), Move::None)); }
-    edges.push(Edge::new(p4.clone(), p5.clone(), Move::Up));
+    if !is_top { edges.push(Edge::new(p4.clone(), p5.clone(), Move::Up)); } else { edges.push(Edge::new(p4.clone(), p5.clone(), Move::None)); }
     if is_top { edges.push(Edge::new(p5.clone(), p0.clone(), Move::None)); }
 }
 
@@ -802,9 +968,9 @@ fn hexagon_148(edges: &mut Vec<Edge>, points: &[Point], is_top: bool, is_right: 
     let (p0, p1, p2, p3, p4, p5) = (&points[0], &points[1], &points[2], &points[3], &points[4], &points[5]);
     if is_right { edges.push(Edge::new(p0.clone(), p1.clone(), Move::Down)); }
     if is_bottom { edges.push(Edge::new(p1.clone(), p2.clone(), Move::None)); }
-    edges.push(Edge::new(p2.clone(), p3.clone(), Move::Left));
+    if !is_left { edges.push(Edge::new(p2.clone(), p3.clone(), Move::Left)); } else { edges.push(Edge::new(p2.clone(), p3.clone(), Move::None)); }
     if is_left { edges.push(Edge::new(p3.clone(), p4.clone(), Move::None)); }
-    edges.push(Edge::new(p4.clone(), p5.clone(), Move::Up));
+    if !is_top { edges.push(Edge::new(p4.clone(), p5.clone(), Move::Up)); } else { edges.push(Edge::new(p4.clone(), p5.clone(), Move::None)); }
     if is_top { edges.push(Edge::new(p5.clone(), p0.clone(), Move::Right)); }
 }
 
@@ -813,9 +979,9 @@ fn hexagon_82(edges: &mut Vec<Edge>, points: &[Point], is_top: bool, is_right: b
     if points.len() < 6 { return; }
     let (p0, p1, p2, p3, p4, p5) = (&points[0], &points[1], &points[2], &points[3], &points[4], &points[5]);
     if is_right { edges.push(Edge::new(p0.clone(), p1.clone(), Move::None)); }
-    edges.push(Edge::new(p1.clone(), p2.clone(), Move::Down));
+    if !is_bottom { edges.push(Edge::new(p1.clone(), p2.clone(), Move::Down)); } else { edges.push(Edge::new(p1.clone(), p2.clone(), Move::None)); }
     if is_bottom { edges.push(Edge::new(p2.clone(), p3.clone(), Move::None)); }
-    edges.push(Edge::new(p3.clone(), p4.clone(), Move::Left));
+    if !is_left { edges.push(Edge::new(p3.clone(), p4.clone(), Move::Left)); } else { edges.push(Edge::new(p3.clone(), p4.clone(), Move::None)); }
     if is_left { edges.push(Edge::new(p4.clone(), p5.clone(), Move::Up)); }
     if is_top { edges.push(Edge::new(p5.clone(), p0.clone(), Move::Right)); }
 }
@@ -824,9 +990,9 @@ fn hexagon_82(edges: &mut Vec<Edge>, points: &[Point], is_top: bool, is_right: b
 fn hexagon_73(edges: &mut Vec<Edge>, points: &[Point], is_top: bool, is_right: bool, is_bottom: bool, is_left: bool) {
     if points.len() < 6 { return; }
     let (p0, p1, p2, p3, p4, p5) = (&points[0], &points[1], &points[2], &points[3], &points[4], &points[5]);
-    edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
+    if !is_right { edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right)); } else { edges.push(Edge::new(p0.clone(), p1.clone(), Move::None)); }
     if is_right { edges.push(Edge::new(p1.clone(), p2.clone(), Move::None)); }
-    edges.push(Edge::new(p2.clone(), p3.clone(), Move::Down));
+    if !is_bottom { edges.push(Edge::new(p2.clone(), p3.clone(), Move::Down)); } else { edges.push(Edge::new(p2.clone(), p3.clone(), Move::None)); }
     if is_bottom { edges.push(Edge::new(p3.clone(), p4.clone(), Move::Left)); }
     if is_left { edges.push(Edge::new(p4.clone(), p5.clone(), Move::Up)); }
     if is_top { edges.push(Edge::new(p5.clone(), p0.clone(), Move::None)); }
@@ -837,10 +1003,10 @@ fn hexagon_145(edges: &mut Vec<Edge>, points: &[Point], is_top: bool, is_right: 
     if points.len() < 6 { return; }
     let (p0, p1, p2, p3, p4, p5) = (&points[0], &points[1], &points[2], &points[3], &points[4], &points[5]);
     if is_right { edges.push(Edge::new(p0.clone(), p1.clone(), Move::None)); }
-    edges.push(Edge::new(p1.clone(), p2.clone(), Move::Down));
+    if !is_bottom { edges.push(Edge::new(p1.clone(), p2.clone(), Move::Down)); } else { edges.push(Edge::new(p1.clone(), p2.clone(), Move::None)); }
     if is_bottom { edges.push(Edge::new(p2.clone(), p3.clone(), Move::Left)); }
     if is_left { edges.push(Edge::new(p3.clone(), p4.clone(), Move::None)); }
-    edges.push(Edge::new(p4.clone(), p5.clone(), Move::Up));
+    if !is_top { edges.push(Edge::new(p4.clone(), p5.clone(), Move::Up)); } else { edges.push(Edge::new(p4.clone(), p5.clone(), Move::None)); }
     if is_top { edges.push(Edge::new(p5.clone(), p0.clone(), Move::Right)); }
 }
 
@@ -848,10 +1014,10 @@ fn hexagon_145(edges: &mut Vec<Edge>, points: &[Point], is_top: bool, is_right: 
 fn hexagon_70(edges: &mut Vec<Edge>, points: &[Point], is_top: bool, is_right: bool, is_bottom: bool, is_left: bool) {
     if points.len() < 6 { return; }
     let (p0, p1, p2, p3, p4, p5) = (&points[0], &points[1], &points[2], &points[3], &points[4], &points[5]);
-    edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
+    if !is_right { edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right)); } else { edges.push(Edge::new(p0.clone(), p1.clone(), Move::None)); }
     if is_right { edges.push(Edge::new(p1.clone(), p2.clone(), Move::Down)); }
     if is_bottom { edges.push(Edge::new(p2.clone(), p3.clone(), Move::None)); }
-    edges.push(Edge::new(p3.clone(), p4.clone(), Move::Left));
+    if !is_left { edges.push(Edge::new(p3.clone(), p4.clone(), Move::Left)); } else { edges.push(Edge::new(p3.clone(), p4.clone(), Move::None)); }
     if is_left { edges.push(Edge::new(p4.clone(), p5.clone(), Move::Up)); }
     if is_top { edges.push(Edge::new(p5.clone(), p0.clone(), Move::None)); }
 }
@@ -875,7 +1041,11 @@ fn saddle_153(
     if average >= upper {
         let p0 = interp(upper, Side::Right);
         let p1 = interp(upper, Side::Top);
-        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Up));
+        if !is_top {
+            edges.push(Edge::new(p0.clone(), p1.clone(), Move::Up));
+        } else {
+            edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
+        }
         if is_top {
             edges.push(Edge::new(p1.clone(), tr_pt.clone(), Move::Right));
         }
@@ -885,7 +1055,11 @@ fn saddle_153(
 
         let p3 = interp(upper, Side::Left);
         let p4 = interp(upper, Side::Bottom);
-        edges.push(Edge::new(p3.clone(), p4.clone(), Move::Down));
+        if !is_bottom {
+            edges.push(Edge::new(p3.clone(), p4.clone(), Move::Down));
+        } else {
+            edges.push(Edge::new(p3.clone(), p4.clone(), Move::None));
+        }
         if is_bottom {
             edges.push(Edge::new(p4.clone(), bl_pt.clone(), Move::Left));
         }
@@ -898,14 +1072,22 @@ fn saddle_153(
         let p3 = interp(upper, Side::Left);
         let p4 = interp(upper, Side::Top);
 
-        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Down));
+        if !is_bottom {
+            edges.push(Edge::new(p0.clone(), p1.clone(), Move::Down));
+        } else {
+            edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
+        }
         if is_bottom {
             edges.push(Edge::new(p1.clone(), bl_pt.clone(), Move::Left));
         }
         if is_left {
             edges.push(Edge::new(bl_pt.clone(), p3.clone(), Move::None));
         }
-        edges.push(Edge::new(p3.clone(), p4.clone(), Move::Up));
+        if !is_top {
+            edges.push(Edge::new(p3.clone(), p4.clone(), Move::Up));
+        } else {
+            edges.push(Edge::new(p3.clone(), p4.clone(), Move::None));
+        }
         if is_top {
             edges.push(Edge::new(p4.clone(), tr_pt.clone(), Move::Right));
         }
@@ -930,7 +1112,11 @@ fn saddle_102(
     if average >= upper {
         let p0 = interp(upper, Side::Top);
         let p1 = interp(upper, Side::Left);
-        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Left));
+        if !is_left {
+            edges.push(Edge::new(p0.clone(), p1.clone(), Move::Left));
+        } else {
+            edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
+        }
         if is_left {
             edges.push(Edge::new(p1.clone(), tl_pt.clone(), Move::Up));
         }
@@ -940,7 +1126,11 @@ fn saddle_102(
 
         let p3 = interp(upper, Side::Bottom);
         let p4 = interp(upper, Side::Right);
-        edges.push(Edge::new(p3.clone(), p4.clone(), Move::Right));
+        if !is_right {
+            edges.push(Edge::new(p3.clone(), p4.clone(), Move::Right));
+        } else {
+            edges.push(Edge::new(p3.clone(), p4.clone(), Move::None));
+        }
         if is_right {
             edges.push(Edge::new(p4.clone(), br_pt.clone(), Move::Down));
         }
@@ -953,14 +1143,22 @@ fn saddle_102(
         let p3 = interp(upper, Side::Bottom);
         let p4 = interp(upper, Side::Left);
 
-        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
+        if !is_right {
+            edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
+        } else {
+            edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
+        }
         if is_right {
             edges.push(Edge::new(p1.clone(), br_pt.clone(), Move::Down));
         }
         if is_bottom {
             edges.push(Edge::new(br_pt.clone(), p3.clone(), Move::None));
         }
-        edges.push(Edge::new(p3.clone(), p4.clone(), Move::Left));
+        if !is_left {
+            edges.push(Edge::new(p3.clone(), p4.clone(), Move::Left));
+        } else {
+            edges.push(Edge::new(p3.clone(), p4.clone(), Move::None));
+        }
         if is_left {
             edges.push(Edge::new(p4.clone(), tl_pt.clone(), Move::Up));
         }
@@ -985,7 +1183,11 @@ fn saddle_68(
     if average < lower {
         let p0 = interp(lower, Side::Top);
         let p1 = interp(lower, Side::Left);
-        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Left));
+        if !is_left {
+            edges.push(Edge::new(p0.clone(), p1.clone(), Move::Left));
+        } else {
+            edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
+        }
         if is_left {
             edges.push(Edge::new(p1.clone(), tl_pt.clone(), Move::Up));
         }
@@ -995,7 +1197,11 @@ fn saddle_68(
 
         let p3 = interp(lower, Side::Bottom);
         let p4 = interp(lower, Side::Right);
-        edges.push(Edge::new(p3.clone(), p4.clone(), Move::Right));
+        if !is_right {
+            edges.push(Edge::new(p3.clone(), p4.clone(), Move::Right));
+        } else {
+            edges.push(Edge::new(p3.clone(), p4.clone(), Move::None));
+        }
         if is_right {
             edges.push(Edge::new(p4.clone(), br_pt.clone(), Move::Down));
         }
@@ -1008,14 +1214,22 @@ fn saddle_68(
         let p3 = interp(lower, Side::Bottom);
         let p4 = interp(lower, Side::Left);
 
-        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
+        if !is_right {
+            edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
+        } else {
+            edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
+        }
         if is_right {
             edges.push(Edge::new(p1.clone(), br_pt.clone(), Move::Down));
         }
         if is_bottom {
             edges.push(Edge::new(br_pt.clone(), p3.clone(), Move::None));
         }
-        edges.push(Edge::new(p3.clone(), p4.clone(), Move::Left));
+        if !is_left {
+            edges.push(Edge::new(p3.clone(), p4.clone(), Move::Left));
+        } else {
+            edges.push(Edge::new(p3.clone(), p4.clone(), Move::None));
+        }
         if is_left {
             edges.push(Edge::new(p4.clone(), tl_pt.clone(), Move::Up));
         }
@@ -1040,7 +1254,11 @@ fn saddle_17(
     if average < lower {
         let p0 = interp(lower, Side::Right);
         let p1 = interp(lower, Side::Top);
-        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Up));
+        if !is_top {
+            edges.push(Edge::new(p0.clone(), p1.clone(), Move::Up));
+        } else {
+            edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
+        }
         if is_top {
             edges.push(Edge::new(p1.clone(), tr_pt.clone(), Move::Right));
         }
@@ -1050,7 +1268,11 @@ fn saddle_17(
 
         let p3 = interp(lower, Side::Left);
         let p4 = interp(lower, Side::Bottom);
-        edges.push(Edge::new(p3.clone(), p4.clone(), Move::Down));
+        if !is_bottom {
+            edges.push(Edge::new(p3.clone(), p4.clone(), Move::Down));
+        } else {
+            edges.push(Edge::new(p3.clone(), p4.clone(), Move::None));
+        }
         if is_bottom {
             edges.push(Edge::new(p4.clone(), bl_pt.clone(), Move::Left));
         }
@@ -1063,14 +1285,22 @@ fn saddle_17(
         let p3 = interp(lower, Side::Left);
         let p4 = interp(lower, Side::Top);
 
-        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Down));
+        if !is_bottom {
+            edges.push(Edge::new(p0.clone(), p1.clone(), Move::Down));
+        } else {
+            edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
+        }
         if is_bottom {
             edges.push(Edge::new(p1.clone(), bl_pt.clone(), Move::Left));
         }
         if is_left {
             edges.push(Edge::new(bl_pt.clone(), p3.clone(), Move::None));
         }
-        edges.push(Edge::new(p3.clone(), p4.clone(), Move::Up));
+        if !is_top {
+            edges.push(Edge::new(p3.clone(), p4.clone(), Move::Up));
+        } else {
+            edges.push(Edge::new(p3.clone(), p4.clone(), Move::None));
+        }
         if is_top {
             edges.push(Edge::new(p4.clone(), tr_pt.clone(), Move::Right));
         }
@@ -1097,11 +1327,19 @@ fn saddle_136(
         let p1 = interp(lower, Side::Left);
         let p2 = interp(upper, Side::Left);
         let p3 = interp(upper, Side::Top);
-        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Left));
+        if !is_left {
+            edges.push(Edge::new(p0.clone(), p1.clone(), Move::Left));
+        } else {
+            edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
+        }
         if is_left {
             edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
         }
-        edges.push(Edge::new(p2.clone(), p3.clone(), Move::Up));
+        if !is_top {
+            edges.push(Edge::new(p2.clone(), p3.clone(), Move::Up));
+        } else {
+            edges.push(Edge::new(p2.clone(), p3.clone(), Move::None));
+        }
         if is_top {
             edges.push(Edge::new(p3.clone(), p0.clone(), Move::None));
         }
@@ -1110,11 +1348,19 @@ fn saddle_136(
         let p5 = interp(upper, Side::Bottom);
         let p6 = interp(lower, Side::Bottom);
         let p7 = interp(lower, Side::Right);
-        edges.push(Edge::new(p4.clone(), p5.clone(), Move::Down));
+        if !is_bottom {
+            edges.push(Edge::new(p4.clone(), p5.clone(), Move::Down));
+        } else {
+            edges.push(Edge::new(p4.clone(), p5.clone(), Move::None));
+        }
         if is_bottom {
             edges.push(Edge::new(p5.clone(), p6.clone(), Move::None));
         }
-        edges.push(Edge::new(p6.clone(), p7.clone(), Move::Right));
+        if !is_right {
+            edges.push(Edge::new(p6.clone(), p7.clone(), Move::Right));
+        } else {
+            edges.push(Edge::new(p6.clone(), p7.clone(), Move::None));
+        }
         if is_right {
             edges.push(Edge::new(p7, p4, Move::None));
         }
@@ -1123,11 +1369,19 @@ fn saddle_136(
         let p1 = interp(lower, Side::Right);
         let p2 = interp(upper, Side::Right);
         let p3 = interp(upper, Side::Top);
-        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
+        if !is_right {
+            edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
+        } else {
+            edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
+        }
         if is_right {
             edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
         }
-        edges.push(Edge::new(p2.clone(), p3.clone(), Move::Up));
+        if !is_top {
+            edges.push(Edge::new(p2.clone(), p3.clone(), Move::Up));
+        } else {
+            edges.push(Edge::new(p2.clone(), p3.clone(), Move::None));
+        }
         if is_top {
             edges.push(Edge::new(p3.clone(), p0.clone(), Move::None));
         }
@@ -1136,11 +1390,19 @@ fn saddle_136(
         let p5 = interp(lower, Side::Left);
         let p6 = interp(upper, Side::Left);
         let p7 = interp(upper, Side::Bottom);
-        edges.push(Edge::new(p4.clone(), p5.clone(), Move::Left));
+        if !is_left {
+            edges.push(Edge::new(p4.clone(), p5.clone(), Move::Left));
+        } else {
+            edges.push(Edge::new(p4.clone(), p5.clone(), Move::None));
+        }
         if is_left {
             edges.push(Edge::new(p5.clone(), p6.clone(), Move::None));
         }
-        edges.push(Edge::new(p6.clone(), p7.clone(), Move::Down));
+        if !is_bottom {
+            edges.push(Edge::new(p6.clone(), p7.clone(), Move::Down));
+        } else {
+            edges.push(Edge::new(p6.clone(), p7.clone(), Move::None));
+        }
         if is_bottom {
             edges.push(Edge::new(p7, p4, Move::None));
         }
@@ -1153,19 +1415,35 @@ fn saddle_136(
         let p5 = interp(lower, Side::Left);
         let p6 = interp(upper, Side::Left);
         let p7 = interp(upper, Side::Top);
-        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
+        if !is_right {
+            edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
+        } else {
+            edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
+        }
         if is_right {
             edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
         }
-        edges.push(Edge::new(p2.clone(), p3.clone(), Move::Down));
+        if !is_bottom {
+            edges.push(Edge::new(p2.clone(), p3.clone(), Move::Down));
+        } else {
+            edges.push(Edge::new(p2.clone(), p3.clone(), Move::None));
+        }
         if is_bottom {
             edges.push(Edge::new(p3.clone(), p4.clone(), Move::None));
         }
-        edges.push(Edge::new(p4.clone(), p5.clone(), Move::Left));
+        if !is_left {
+            edges.push(Edge::new(p4.clone(), p5.clone(), Move::Left));
+        } else {
+            edges.push(Edge::new(p4.clone(), p5.clone(), Move::None));
+        }
         if is_left {
             edges.push(Edge::new(p5.clone(), p6.clone(), Move::None));
         }
-        edges.push(Edge::new(p6.clone(), p7.clone(), Move::Up));
+        if !is_top {
+            edges.push(Edge::new(p6.clone(), p7.clone(), Move::Up));
+        } else {
+            edges.push(Edge::new(p6.clone(), p7.clone(), Move::None));
+        }
         if is_top {
             edges.push(Edge::new(p7, p0, Move::None));
         }
@@ -1189,11 +1467,19 @@ fn saddle_34(
         let p1 = interp(upper, Side::Left);
         let p2 = interp(lower, Side::Left);
         let p3 = interp(lower, Side::Top);
-        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Left));
+        if !is_left {
+            edges.push(Edge::new(p0.clone(), p1.clone(), Move::Left));
+        } else {
+            edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
+        }
         if is_left {
             edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
         }
-        edges.push(Edge::new(p2.clone(), p3.clone(), Move::Up));
+        if !is_top {
+            edges.push(Edge::new(p2.clone(), p3.clone(), Move::Up));
+        } else {
+            edges.push(Edge::new(p2.clone(), p3.clone(), Move::None));
+        }
         if is_top {
             edges.push(Edge::new(p3.clone(), p0.clone(), Move::None));
         }
@@ -1202,11 +1488,19 @@ fn saddle_34(
         let p5 = interp(lower, Side::Bottom);
         let p6 = interp(upper, Side::Bottom);
         let p7 = interp(upper, Side::Right);
-        edges.push(Edge::new(p4.clone(), p5.clone(), Move::Down));
+        if !is_bottom {
+            edges.push(Edge::new(p4.clone(), p5.clone(), Move::Down));
+        } else {
+            edges.push(Edge::new(p4.clone(), p5.clone(), Move::None));
+        }
         if is_bottom {
             edges.push(Edge::new(p5.clone(), p6.clone(), Move::None));
         }
-        edges.push(Edge::new(p6.clone(), p7.clone(), Move::Right));
+        if !is_right {
+            edges.push(Edge::new(p6.clone(), p7.clone(), Move::Right));
+        } else {
+            edges.push(Edge::new(p6.clone(), p7.clone(), Move::None));
+        }
         if is_right {
             edges.push(Edge::new(p7, p4, Move::None));
         }
@@ -1215,11 +1509,19 @@ fn saddle_34(
         let p1 = interp(upper, Side::Right);
         let p2 = interp(lower, Side::Right);
         let p3 = interp(lower, Side::Top);
-        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
+        if !is_right {
+            edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
+        } else {
+            edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
+        }
         if is_right {
             edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
         }
-        edges.push(Edge::new(p2.clone(), p3.clone(), Move::Up));
+        if !is_top {
+            edges.push(Edge::new(p2.clone(), p3.clone(), Move::Up));
+        } else {
+            edges.push(Edge::new(p2.clone(), p3.clone(), Move::None));
+        }
         if is_top {
             edges.push(Edge::new(p3.clone(), p0.clone(), Move::None));
         }
@@ -1228,11 +1530,19 @@ fn saddle_34(
         let p5 = interp(upper, Side::Left);
         let p6 = interp(lower, Side::Left);
         let p7 = interp(lower, Side::Bottom);
-        edges.push(Edge::new(p4.clone(), p5.clone(), Move::Left));
+        if !is_left {
+            edges.push(Edge::new(p4.clone(), p5.clone(), Move::Left));
+        } else {
+            edges.push(Edge::new(p4.clone(), p5.clone(), Move::None));
+        }
         if is_left {
             edges.push(Edge::new(p5.clone(), p6.clone(), Move::None));
         }
-        edges.push(Edge::new(p6.clone(), p7.clone(), Move::Down));
+        if !is_bottom {
+            edges.push(Edge::new(p6.clone(), p7.clone(), Move::Down));
+        } else {
+            edges.push(Edge::new(p6.clone(), p7.clone(), Move::None));
+        }
         if is_bottom {
             edges.push(Edge::new(p7, p4, Move::None));
         }
@@ -1245,19 +1555,35 @@ fn saddle_34(
         let p5 = interp(upper, Side::Left);
         let p6 = interp(lower, Side::Left);
         let p7 = interp(lower, Side::Top);
-        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
+        if !is_right {
+            edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
+        } else {
+            edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
+        }
         if is_right {
             edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
         }
-        edges.push(Edge::new(p2.clone(), p3.clone(), Move::Down));
+        if !is_bottom {
+            edges.push(Edge::new(p2.clone(), p3.clone(), Move::Down));
+        } else {
+            edges.push(Edge::new(p2.clone(), p3.clone(), Move::None));
+        }
         if is_bottom {
             edges.push(Edge::new(p3.clone(), p4.clone(), Move::None));
         }
-        edges.push(Edge::new(p4.clone(), p5.clone(), Move::Left));
+        if !is_left {
+            edges.push(Edge::new(p4.clone(), p5.clone(), Move::Left));
+        } else {
+            edges.push(Edge::new(p4.clone(), p5.clone(), Move::None));
+        }
         if is_left {
             edges.push(Edge::new(p5.clone(), p6.clone(), Move::None));
         }
-        edges.push(Edge::new(p6.clone(), p7.clone(), Move::Up));
+        if !is_top {
+            edges.push(Edge::new(p6.clone(), p7.clone(), Move::Up));
+        } else {
+            edges.push(Edge::new(p6.clone(), p7.clone(), Move::None));
+        }
         if is_top {
             edges.push(Edge::new(p7, p0, Move::None));
         }
@@ -1279,7 +1605,11 @@ fn saddle_152(
     if average < lower || average >= upper {
         let p0 = interp(upper, Side::Right);
         let p1 = interp(upper, Side::Top);
-        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Up));
+        if !is_top {
+            edges.push(Edge::new(p0.clone(), p1.clone(), Move::Up));
+        } else {
+            edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
+        }
         if is_top {
             edges.push(Edge::new(p1.clone(), tr_pt.clone(), Move::Right));
         }
@@ -1291,11 +1621,19 @@ fn saddle_152(
         let p4 = interp(lower, Side::Left);
         let p5 = interp(upper, Side::Left);
         let p6 = interp(upper, Side::Bottom);
-        edges.push(Edge::new(p3.clone(), p4.clone(), Move::Left));
+        if !is_left {
+            edges.push(Edge::new(p3.clone(), p4.clone(), Move::Left));
+        } else {
+            edges.push(Edge::new(p3.clone(), p4.clone(), Move::None));
+        }
         if is_left {
             edges.push(Edge::new(p4.clone(), p5.clone(), Move::None));
         }
-        edges.push(Edge::new(p5.clone(), p6.clone(), Move::Down));
+        if !is_bottom {
+            edges.push(Edge::new(p5.clone(), p6.clone(), Move::Down));
+        } else {
+            edges.push(Edge::new(p5.clone(), p6.clone(), Move::None));
+        }
         if is_bottom {
             edges.push(Edge::new(p6, p3, Move::None));
         }
@@ -1307,15 +1645,27 @@ fn saddle_152(
         let p4 = interp(upper, Side::Left);
         let p5 = interp(upper, Side::Top);
 
-        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Down));
+        if !is_bottom {
+            edges.push(Edge::new(p0.clone(), p1.clone(), Move::Down));
+        } else {
+            edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
+        }
         if is_bottom {
             edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
         }
-        edges.push(Edge::new(p2.clone(), p3.clone(), Move::Left));
+        if !is_left {
+            edges.push(Edge::new(p2.clone(), p3.clone(), Move::Left));
+        } else {
+            edges.push(Edge::new(p2.clone(), p3.clone(), Move::None));
+        }
         if is_left {
             edges.push(Edge::new(p3.clone(), p4.clone(), Move::None));
         }
-        edges.push(Edge::new(p4.clone(), p5.clone(), Move::Up));
+        if !is_top {
+            edges.push(Edge::new(p4.clone(), p5.clone(), Move::Up));
+        } else {
+            edges.push(Edge::new(p4.clone(), p5.clone(), Move::None));
+        }
         if is_top {
             edges.push(Edge::new(p5.clone(), tr_pt.clone(), Move::Right));
         }
@@ -1340,7 +1690,11 @@ fn saddle_18(
     if average < lower || average >= upper {
         let p0 = interp(lower, Side::Right);
         let p1 = interp(lower, Side::Top);
-        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Up));
+        if !is_top {
+            edges.push(Edge::new(p0.clone(), p1.clone(), Move::Up));
+        } else {
+            edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
+        }
         if is_top {
             edges.push(Edge::new(p1.clone(), tr_pt.clone(), Move::Right));
         }
@@ -1352,11 +1706,19 @@ fn saddle_18(
         let p4 = interp(upper, Side::Left);
         let p5 = interp(lower, Side::Left);
         let p6 = interp(lower, Side::Bottom);
-        edges.push(Edge::new(p3.clone(), p4.clone(), Move::Left));
+        if !is_left {
+            edges.push(Edge::new(p3.clone(), p4.clone(), Move::Left));
+        } else {
+            edges.push(Edge::new(p3.clone(), p4.clone(), Move::None));
+        }
         if is_left {
             edges.push(Edge::new(p4.clone(), p5.clone(), Move::None));
         }
-        edges.push(Edge::new(p5.clone(), p6.clone(), Move::Down));
+        if !is_bottom {
+            edges.push(Edge::new(p5.clone(), p6.clone(), Move::Down));
+        } else {
+            edges.push(Edge::new(p5.clone(), p6.clone(), Move::None));
+        }
         if is_bottom {
             edges.push(Edge::new(p6, p3, Move::None));
         }
@@ -1368,15 +1730,27 @@ fn saddle_18(
         let p4 = interp(lower, Side::Left);
         let p5 = interp(lower, Side::Top);
 
-        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Down));
+        if !is_bottom {
+            edges.push(Edge::new(p0.clone(), p1.clone(), Move::Down));
+        } else {
+            edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
+        }
         if is_bottom {
             edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
         }
-        edges.push(Edge::new(p2.clone(), p3.clone(), Move::Left));
+        if !is_left {
+            edges.push(Edge::new(p2.clone(), p3.clone(), Move::Left));
+        } else {
+            edges.push(Edge::new(p2.clone(), p3.clone(), Move::None));
+        }
         if is_left {
             edges.push(Edge::new(p3.clone(), p4.clone(), Move::None));
         }
-        edges.push(Edge::new(p4.clone(), p5.clone(), Move::Up));
+        if !is_top {
+            edges.push(Edge::new(p4.clone(), p5.clone(), Move::Up));
+        } else {
+            edges.push(Edge::new(p4.clone(), p5.clone(), Move::None));
+        }
         if is_top {
             edges.push(Edge::new(p5.clone(), tr_pt.clone(), Move::Right));
         }
@@ -1403,18 +1777,30 @@ fn saddle_137(
         let p1 = interp(lower, Side::Right);
         let p2 = interp(upper, Side::Right);
         let p3 = interp(upper, Side::Top);
-        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
+        if !is_right {
+            edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
+        } else {
+            edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
+        }
         if is_right {
             edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
         }
-        edges.push(Edge::new(p2.clone(), p3.clone(), Move::Up));
+        if !is_top {
+            edges.push(Edge::new(p2.clone(), p3.clone(), Move::Up));
+        } else {
+            edges.push(Edge::new(p2.clone(), p3.clone(), Move::None));
+        }
         if is_top {
             edges.push(Edge::new(p3.clone(), p0.clone(), Move::None));
         }
 
         let p4 = interp(upper, Side::Left);
         let p5 = interp(upper, Side::Bottom);
-        edges.push(Edge::new(p4.clone(), p5.clone(), Move::Down));
+        if !is_bottom {
+            edges.push(Edge::new(p4.clone(), p5.clone(), Move::Down));
+        } else {
+            edges.push(Edge::new(p4.clone(), p5.clone(), Move::None));
+        }
         if is_bottom {
             edges.push(Edge::new(p5.clone(), bl_pt.clone(), Move::Left));
         }
@@ -1429,18 +1815,30 @@ fn saddle_137(
         let p5 = interp(upper, Side::Left);
         let p6 = interp(upper, Side::Top);
 
-        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
+        if !is_right {
+            edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
+        } else {
+            edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
+        }
         if is_right {
             edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
         }
-        edges.push(Edge::new(p2.clone(), p3.clone(), Move::Down));
+        if !is_bottom {
+            edges.push(Edge::new(p2.clone(), p3.clone(), Move::Down));
+        } else {
+            edges.push(Edge::new(p2.clone(), p3.clone(), Move::None));
+        }
         if is_bottom {
             edges.push(Edge::new(p3.clone(), bl_pt.clone(), Move::Left));
         }
         if is_left {
             edges.push(Edge::new(bl_pt.clone(), p5.clone(), Move::None));
         }
-        edges.push(Edge::new(p5.clone(), p6.clone(), Move::Up));
+        if !is_top {
+            edges.push(Edge::new(p5.clone(), p6.clone(), Move::Up));
+        } else {
+            edges.push(Edge::new(p5.clone(), p6.clone(), Move::None));
+        }
         if is_top {
             edges.push(Edge::new(p6.clone(), p0.clone(), Move::None));
         }
@@ -1464,18 +1862,30 @@ fn saddle_33(
         let p1 = interp(upper, Side::Right);
         let p2 = interp(lower, Side::Right);
         let p3 = interp(lower, Side::Top);
-        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
+        if !is_right {
+            edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
+        } else {
+            edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
+        }
         if is_right {
             edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
         }
-        edges.push(Edge::new(p2.clone(), p3.clone(), Move::Up));
+        if !is_top {
+            edges.push(Edge::new(p2.clone(), p3.clone(), Move::Up));
+        } else {
+            edges.push(Edge::new(p2.clone(), p3.clone(), Move::None));
+        }
         if is_top {
             edges.push(Edge::new(p3.clone(), p0.clone(), Move::None));
         }
 
         let p4 = interp(lower, Side::Left);
         let p5 = interp(lower, Side::Bottom);
-        edges.push(Edge::new(p4.clone(), p5.clone(), Move::Down));
+        if !is_bottom {
+            edges.push(Edge::new(p4.clone(), p5.clone(), Move::Down));
+        } else {
+            edges.push(Edge::new(p4.clone(), p5.clone(), Move::None));
+        }
         if is_bottom {
             edges.push(Edge::new(p5.clone(), bl_pt.clone(), Move::Left));
         }
@@ -1490,18 +1900,30 @@ fn saddle_33(
         let p5 = interp(lower, Side::Left);
         let p6 = interp(lower, Side::Top);
 
-        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
+        if !is_right {
+            edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
+        } else {
+            edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
+        }
         if is_right {
             edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
         }
-        edges.push(Edge::new(p2.clone(), p3.clone(), Move::Down));
+        if !is_bottom {
+            edges.push(Edge::new(p2.clone(), p3.clone(), Move::Down));
+        } else {
+            edges.push(Edge::new(p2.clone(), p3.clone(), Move::None));
+        }
         if is_bottom {
             edges.push(Edge::new(p3.clone(), bl_pt.clone(), Move::Left));
         }
         if is_left {
             edges.push(Edge::new(bl_pt.clone(), p5.clone(), Move::None));
         }
-        edges.push(Edge::new(p5.clone(), p6.clone(), Move::Up));
+        if !is_top {
+            edges.push(Edge::new(p5.clone(), p6.clone(), Move::Up));
+        } else {
+            edges.push(Edge::new(p5.clone(), p6.clone(), Move::None));
+        }
         if is_top {
             edges.push(Edge::new(p6.clone(), p0.clone(), Move::None));
         }
@@ -1523,7 +1945,11 @@ fn saddle_98(
     if average < lower || average >= upper {
         let p0 = interp(upper, Side::Top);
         let p1 = interp(upper, Side::Left);
-        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Left));
+        if !is_left {
+            edges.push(Edge::new(p0.clone(), p1.clone(), Move::Left));
+        } else {
+            edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
+        }
         if is_left {
             edges.push(Edge::new(p1.clone(), tl_pt.clone(), Move::Up));
         }
@@ -1535,11 +1961,19 @@ fn saddle_98(
         let p4 = interp(lower, Side::Bottom);
         let p5 = interp(upper, Side::Bottom);
         let p6 = interp(upper, Side::Right);
-        edges.push(Edge::new(p3.clone(), p4.clone(), Move::Down));
+        if !is_bottom {
+            edges.push(Edge::new(p3.clone(), p4.clone(), Move::Down));
+        } else {
+            edges.push(Edge::new(p3.clone(), p4.clone(), Move::None));
+        }
         if is_bottom {
             edges.push(Edge::new(p4.clone(), p5.clone(), Move::None));
         }
-        edges.push(Edge::new(p5.clone(), p6.clone(), Move::Right));
+        if !is_right {
+            edges.push(Edge::new(p5.clone(), p6.clone(), Move::Right));
+        } else {
+            edges.push(Edge::new(p5.clone(), p6.clone(), Move::None));
+        }
         if is_right {
             edges.push(Edge::new(p6, p3, Move::None));
         }
@@ -1551,15 +1985,27 @@ fn saddle_98(
         let p4 = interp(upper, Side::Bottom);
         let p5 = interp(upper, Side::Left);
 
-        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
+        if !is_right {
+            edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
+        } else {
+            edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
+        }
         if is_right {
             edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
         }
-        edges.push(Edge::new(p2.clone(), p3.clone(), Move::Down));
+        if !is_bottom {
+            edges.push(Edge::new(p2.clone(), p3.clone(), Move::Down));
+        } else {
+            edges.push(Edge::new(p2.clone(), p3.clone(), Move::None));
+        }
         if is_bottom {
             edges.push(Edge::new(p3.clone(), p4.clone(), Move::None));
         }
-        edges.push(Edge::new(p4.clone(), p5.clone(), Move::Left));
+        if !is_left {
+            edges.push(Edge::new(p4.clone(), p5.clone(), Move::Left));
+        } else {
+            edges.push(Edge::new(p4.clone(), p5.clone(), Move::None));
+        }
         if is_left {
             edges.push(Edge::new(p5.clone(), tl_pt.clone(), Move::Up));
         }
@@ -1584,7 +2030,11 @@ fn saddle_72(
     if average < lower || average >= upper {
         let p0 = interp(lower, Side::Top);
         let p1 = interp(lower, Side::Left);
-        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Left));
+        if !is_left {
+            edges.push(Edge::new(p0.clone(), p1.clone(), Move::Left));
+        } else {
+            edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
+        }
         if is_left {
             edges.push(Edge::new(p1.clone(), tl_pt.clone(), Move::Up));
         }
@@ -1596,11 +2046,19 @@ fn saddle_72(
         let p4 = interp(upper, Side::Bottom);
         let p5 = interp(lower, Side::Bottom);
         let p6 = interp(lower, Side::Right);
-        edges.push(Edge::new(p3.clone(), p4.clone(), Move::Down));
+        if !is_bottom {
+            edges.push(Edge::new(p3.clone(), p4.clone(), Move::Down));
+        } else {
+            edges.push(Edge::new(p3.clone(), p4.clone(), Move::None));
+        }
         if is_bottom {
             edges.push(Edge::new(p4.clone(), p5.clone(), Move::None));
         }
-        edges.push(Edge::new(p5.clone(), p6.clone(), Move::Right));
+        if !is_right {
+            edges.push(Edge::new(p5.clone(), p6.clone(), Move::Right));
+        } else {
+            edges.push(Edge::new(p5.clone(), p6.clone(), Move::None));
+        }
         if is_right {
             edges.push(Edge::new(p6, p3, Move::None));
         }
@@ -1612,15 +2070,27 @@ fn saddle_72(
         let p4 = interp(lower, Side::Bottom);
         let p5 = interp(lower, Side::Left);
 
-        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
+        if !is_right {
+            edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
+        } else {
+            edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
+        }
         if is_right {
             edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
         }
-        edges.push(Edge::new(p2.clone(), p3.clone(), Move::Down));
+        if !is_bottom {
+            edges.push(Edge::new(p2.clone(), p3.clone(), Move::Down));
+        } else {
+            edges.push(Edge::new(p2.clone(), p3.clone(), Move::None));
+        }
         if is_bottom {
             edges.push(Edge::new(p3.clone(), p4.clone(), Move::None));
         }
-        edges.push(Edge::new(p4.clone(), p5.clone(), Move::Left));
+        if !is_left {
+            edges.push(Edge::new(p4.clone(), p5.clone(), Move::Left));
+        } else {
+            edges.push(Edge::new(p4.clone(), p5.clone(), Move::None));
+        }
         if is_left {
             edges.push(Edge::new(p5.clone(), tl_pt.clone(), Move::Up));
         }
@@ -1647,18 +2117,30 @@ fn saddle_38(
         let p1 = interp(upper, Side::Left);
         let p2 = interp(lower, Side::Left);
         let p3 = interp(lower, Side::Top);
-        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Left));
+        if !is_left {
+            edges.push(Edge::new(p0.clone(), p1.clone(), Move::Left));
+        } else {
+            edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
+        }
         if is_left {
             edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
         }
-        edges.push(Edge::new(p2.clone(), p3.clone(), Move::Up));
+        if !is_top {
+            edges.push(Edge::new(p2.clone(), p3.clone(), Move::Up));
+        } else {
+            edges.push(Edge::new(p2.clone(), p3.clone(), Move::None));
+        }
         if is_top {
             edges.push(Edge::new(p3.clone(), p0.clone(), Move::None));
         }
 
         let p4 = interp(upper, Side::Bottom);
         let p5 = interp(upper, Side::Right);
-        edges.push(Edge::new(p4.clone(), p5.clone(), Move::Right));
+        if !is_right {
+            edges.push(Edge::new(p4.clone(), p5.clone(), Move::Right));
+        } else {
+            edges.push(Edge::new(p4.clone(), p5.clone(), Move::None));
+        }
         if is_right {
             edges.push(Edge::new(p5.clone(), br_pt.clone(), Move::Down));
         }
@@ -1673,18 +2155,30 @@ fn saddle_38(
         let p5 = interp(lower, Side::Left);
         let p6 = interp(lower, Side::Top);
 
-        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
+        if !is_right {
+            edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
+        } else {
+            edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
+        }
         if is_right {
             edges.push(Edge::new(p1.clone(), br_pt.clone(), Move::Down));
         }
         if is_bottom {
             edges.push(Edge::new(br_pt.clone(), p3.clone(), Move::None));
         }
-        edges.push(Edge::new(p3.clone(), p4.clone(), Move::Left));
+        if !is_left {
+            edges.push(Edge::new(p3.clone(), p4.clone(), Move::Left));
+        } else {
+            edges.push(Edge::new(p3.clone(), p4.clone(), Move::None));
+        }
         if is_left {
             edges.push(Edge::new(p4.clone(), p5.clone(), Move::None));
         }
-        edges.push(Edge::new(p5.clone(), p6.clone(), Move::Up));
+        if !is_top {
+            edges.push(Edge::new(p5.clone(), p6.clone(), Move::Up));
+        } else {
+            edges.push(Edge::new(p5.clone(), p6.clone(), Move::None));
+        }
         if is_top {
             edges.push(Edge::new(p6.clone(), p0.clone(), Move::None));
         }
@@ -1708,18 +2202,30 @@ fn saddle_132(
         let p1 = interp(lower, Side::Left);
         let p2 = interp(upper, Side::Left);
         let p3 = interp(upper, Side::Top);
-        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Left));
+        if !is_left {
+            edges.push(Edge::new(p0.clone(), p1.clone(), Move::Left));
+        } else {
+            edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
+        }
         if is_left {
             edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
         }
-        edges.push(Edge::new(p2.clone(), p3.clone(), Move::Up));
+        if !is_top {
+            edges.push(Edge::new(p2.clone(), p3.clone(), Move::Up));
+        } else {
+            edges.push(Edge::new(p2.clone(), p3.clone(), Move::None));
+        }
         if is_top {
             edges.push(Edge::new(p3.clone(), p0.clone(), Move::None));
         }
 
         let p4 = interp(lower, Side::Bottom);
         let p5 = interp(lower, Side::Right);
-        edges.push(Edge::new(p4.clone(), p5.clone(), Move::Right));
+        if !is_right {
+            edges.push(Edge::new(p4.clone(), p5.clone(), Move::Right));
+        } else {
+            edges.push(Edge::new(p4.clone(), p5.clone(), Move::None));
+        }
         if is_right {
             edges.push(Edge::new(p5.clone(), br_pt.clone(), Move::Down));
         }
@@ -1734,18 +2240,30 @@ fn saddle_132(
         let p5 = interp(upper, Side::Left);
         let p6 = interp(upper, Side::Top);
 
-        edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
+        if !is_right {
+            edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
+        } else {
+            edges.push(Edge::new(p0.clone(), p1.clone(), Move::None));
+        }
         if is_right {
             edges.push(Edge::new(p1.clone(), br_pt.clone(), Move::Down));
         }
         if is_bottom {
             edges.push(Edge::new(br_pt.clone(), p3.clone(), Move::None));
         }
-        edges.push(Edge::new(p3.clone(), p4.clone(), Move::Left));
+        if !is_left {
+            edges.push(Edge::new(p3.clone(), p4.clone(), Move::Left));
+        } else {
+            edges.push(Edge::new(p3.clone(), p4.clone(), Move::None));
+        }
         if is_left {
             edges.push(Edge::new(p4.clone(), p5.clone(), Move::None));
         }
-        edges.push(Edge::new(p5.clone(), p6.clone(), Move::Up));
+        if !is_top {
+            edges.push(Edge::new(p5.clone(), p6.clone(), Move::Up));
+        } else {
+            edges.push(Edge::new(p5.clone(), p6.clone(), Move::None));
+        }
         if is_top {
             edges.push(Edge::new(p6.clone(), p0.clone(), Move::None));
         }
