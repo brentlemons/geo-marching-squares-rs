@@ -192,43 +192,21 @@ pub fn trace_ring(
 
         // Java: Move logic happens AFTER the for loop (lines 86-97)
         // This runs even if we broke from the for loop above
+        // Java relies on short-circuit evaluation of the while condition to avoid
+        // accessing out-of-bounds cells when goOn is false
         if let Some(ref edge) = current_edge {
             match edge.move_dir {
                 crate::types::Move::Right => {
-                    if current_col + 1 >= cols {
-                        eprintln!("⚠️ BOUNDARY: Can't move RIGHT from ({},{}) - at right edge (cols={})", current_row, current_col, cols);
-                        eprintln!("   Ring has {} edges, go_on={}, edge: ({:.3},{:.3}) -> ({:.3},{:.3})",
-                            all_edges.len(), go_on, edge.start.x, edge.start.y, edge.end.x, edge.end.y);
-                        break;
-                    }
                     current_col += 1;
                 }
                 crate::types::Move::Down => {
-                    if current_row + 1 >= rows {
-                        eprintln!("⚠️ BOUNDARY: Can't move DOWN from ({},{}) - at bottom edge (rows={})", current_row, current_col, rows);
-                        eprintln!("   Ring has {} edges, go_on={}, edge: ({:.3},{:.3}) -> ({:.3},{:.3})",
-                            all_edges.len(), go_on, edge.start.x, edge.start.y, edge.end.x, edge.end.y);
-                        break;
-                    }
                     current_row += 1;
                 }
                 crate::types::Move::Left => {
-                    if current_col == 0 {
-                        eprintln!("⚠️ BOUNDARY: Can't move LEFT from ({},{}) - at left edge", current_row, current_col);
-                        eprintln!("   Ring has {} edges, go_on={}, edge: ({:.3},{:.3}) -> ({:.3},{:.3})",
-                            all_edges.len(), go_on, edge.start.x, edge.start.y, edge.end.x, edge.end.y);
-                        break;
-                    }
-                    current_col -= 1;
+                    current_col = current_col.saturating_sub(1);
                 }
                 crate::types::Move::Up => {
-                    if current_row == 0 {
-                        eprintln!("⚠️ BOUNDARY: Can't move UP from ({},{}) - at top edge", current_row, current_col);
-                        eprintln!("   Ring has {} edges, go_on={}, edge: ({:.3},{:.3}) -> ({:.3},{:.3})",
-                            all_edges.len(), go_on, edge.start.x, edge.start.y, edge.end.x, edge.end.y);
-                        break;
-                    }
-                    current_row -= 1;
+                    current_row = current_row.saturating_sub(1);
                 }
                 crate::types::Move::None => {
                     // Edge stays in same cell
