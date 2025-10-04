@@ -258,8 +258,12 @@ pub fn trace_ring(
     // CRITICAL FIX: Ensure ring is closed
     // If the ring didn't close perfectly during tracing (due to floating point differences),
     // explicitly close it by replacing the last point with the first
-    if let (Some(first), Some(last)) = (points.first(), points.last()) {
+    if points.len() >= 2 {
         const EPSILON: f64 = 1.0; // 1 degree - if they're within this, they SHOULD be the same point
+        let first = points[0].clone();
+        let last_idx = points.len() - 1;
+        let last = points[last_idx].clone();
+
         let dx = first.x - last.x;
         let dy = first.y - last.y;
         let dist = (dx * dx + dy * dy).sqrt();
@@ -270,9 +274,7 @@ pub fn trace_ring(
                 start_row, start_col, first.x, first.y, last.x, last.y, dist);
         } else if dist > 1e-10 {
             // Ring should be closed but has small gap - fix it
-            if let Some(last_point) = points.last_mut() {
-                *last_point = first.clone();
-            }
+            points[last_idx] = first;
         }
     }
 
