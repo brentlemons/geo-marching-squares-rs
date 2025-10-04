@@ -179,6 +179,13 @@ pub fn trace_ring(
 
             // Java: for (Edge edge : tmpEdges) { ... }
             for edge in &tmp_edges {
+                // Debug: Check for unusually long edges (possible tracing bug)
+                let edge_length_deg = ((edge.end.x - edge.start.x).powi(2) + (edge.end.y - edge.start.y).powi(2)).sqrt();
+                if edge_length_deg > 10.0 {  // ~1000km at mid-latitudes
+                    eprintln!("🚨 LONG EDGE DETECTED: ({},{}) edge from ({:.6},{:.6}) to ({:.6},{:.6}), length={:.2}°, move={:?}",
+                        current_row, current_col, edge.start.x, edge.start.y, edge.end.x, edge.end.y, edge_length_deg, edge.move_dir);
+                }
+
                 // Java: cells[y][x].removeEdge(edge.getStart());
                 cell_mut.remove_edge(&edge.start);
 
