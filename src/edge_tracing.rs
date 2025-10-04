@@ -140,10 +140,11 @@ pub fn trace_ring(
     let mut iterations = 0;
     const MAX_ITERATIONS: usize = 10000;
 
-    // Debug tracing if we start at row 0 (top boundary)
-    let debug_trace = start_row == 0 && start_col < 20;
+    // Debug tracing if we start at specific problematic areas
+    // Looking for the ring that creates the diagonal from west coast to east coast
+    let debug_trace = start_row < 50; // Debug first 50 rows
     if debug_trace {
-        eprintln!("🎯 Starting trace at TOP BOUNDARY cell ({},{})", start_row, start_col);
+        eprintln!("🎯 Starting trace at cell ({},{})", start_row, start_col);
     }
 
     // Java: while (goOn && !cells[y][x].getEdges(...).isEmpty())
@@ -252,6 +253,27 @@ pub fn trace_ring(
     points.push(all_edges[0].start.clone());
     for edge in &all_edges {
         points.push(edge.end.clone());
+    }
+
+    // CRITICAL FIX: Ensure ring is closed
+    // If the ring didn't close perfectly during tracing (due to floating point differences),
+    // explicitly close it by replacing the last point with the first
+    if let (Some(first), Some(last)) = (points.first(), points.last()) {
+        const EPSILON: f64 = 1.0; // 1 degree - if they're within this, they SHOULD be the same point
+        let dx = first.x - last.x;
+        let dy = first.y - last.y;
+        let dist = (dx * dx + dy * dy).sqrt();
+
+        if dist > EPSILON {
+            // Ring is NOT closed and they're too far apart - this is a real error
+            eprintln!("⚠️ WARNING: Ring at ({},{}) failed to close! first=({:.6},{:.6}) last=({:.6},{:.6}) dist={:.6}°",
+                start_row, start_col, first.x, first.y, last.x, last.y, dist);
+        } else if dist > 1e-10 {
+            // Ring should be closed but has small gap - fix it
+            if let Some(last_point) = points.last_mut() {
+                *last_point = first.clone();
+            }
+        }
     }
 
     // Debug: Check for long segments in the final ring
