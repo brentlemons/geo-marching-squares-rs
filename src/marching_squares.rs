@@ -701,6 +701,11 @@ pub fn generate_isobands_phase2(grid: &GeoGrid, lower: f64, upper: f64) -> Resul
             let config = calculate_cell_config(tl, tr, br, bl, lower, upper);
 
             // Create cell shape
+            let is_top = row == 0;
+            let is_right = col + 1 == cols - 1;
+            let is_bottom = row + 1 == rows - 1;
+            let is_left = col == 0;
+
             let shape_opt = CellShape::from_config(
                 config,
                 tl,
@@ -711,13 +716,22 @@ pub fn generate_isobands_phase2(grid: &GeoGrid, lower: f64, upper: f64) -> Resul
                 upper,
                 grid.config().smoothing_factor.into(),
                 grid.config().interpolation_method,
-                row == 0,
-                col + 1 == cols - 1,
-                row + 1 == rows - 1,
-                col == 0,
+                is_top,
+                is_right,
+                is_bottom,
+                is_left,
             );
 
             if let Some(shape) = shape_opt {
+                // Debug boundary cells
+                if is_top || is_right || is_bottom || is_left {
+                    eprintln!("🔍 BOUNDARY CELL ({},{}) config={} bounds=[T:{} R:{} B:{} L:{}] edges={}",
+                        row, col, config, is_top, is_right, is_bottom, is_left, shape.edges.len());
+                    for (start, edge) in &shape.edges {
+                        eprintln!("   Edge: ({:.3},{:.3}) -> ({:.3},{:.3}) move={:?}",
+                            start.x, start.y, edge.end.x, edge.end.y, edge.move_dir);
+                    }
+                }
                 cell_row.push(Some(CellWithEdges::new(shape)));
             } else {
                 cell_row.push(None);
