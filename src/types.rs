@@ -5,20 +5,16 @@ use std::hash::{Hash, Hasher};
 
 /// Round coordinate to 5 decimal places (~1.1 meter precision at equator)
 /// This matches the Java implementation (positionAccuracy = 5)
-/// Uses HALF_UP rounding strategy to match Java's BigDecimal.setScale(5, RoundingMode.HALF_UP)
+///
+/// Uses Rust's built-in `round()` which implements "round half-way cases away from 0.0"
+/// This is equivalent to Java's BigDecimal.setScale(5, RoundingMode.HALF_UP)
 ///
 /// IMPORTANT: Only applied at final GeoJSON output, NOT during interpolation.
 /// This ensures adjacent cells compute identical edge endpoints during tracing.
 pub fn round_coordinate(coord: f64) -> f64 {
-    // HALF_UP: Round 0.5 away from zero (matches Java's HALF_UP)
-    let multiplier = 100_000.0; // 5 decimal places
-    let shifted = coord * multiplier;
-    let rounded = if shifted >= 0.0 {
-        (shifted + 0.5).floor()
-    } else {
-        (shifted - 0.5).ceil()
-    };
-    rounded / multiplier
+    // Rust's round() already does HALF_UP (rounds 0.5 away from zero)
+    // which matches Java's RoundingMode.HALF_UP behavior
+    (coord * 100_000.0).round() / 100_000.0
 }
 
 /// A point with geographic coordinates and a data value
