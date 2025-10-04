@@ -760,16 +760,14 @@ pub fn generate_isobands_phase2(grid: &GeoGrid, lower: f64, upper: f64) -> Resul
         .map(|(poly_idx, (exterior, holes))| {
             let mut polygon_rings = Vec::new();
 
-            // Debug: Check exterior ring BEFORE rounding
-            for i in 0..exterior.len().saturating_sub(1) {
-                let p1 = &exterior[i];
-                let p2 = &exterior[i + 1];
-                let seg_len = ((p2.x - p1.x).powi(2) + (p2.y - p1.y).powi(2)).sqrt();
-                if seg_len > 10.0 {
-                    eprintln!("🚨 LONG SEGMENT BEFORE ROUNDING in polygon {}: segment {} from ({:.6},{:.6}) to ({:.6},{:.6}), length={:.2}°",
-                        poly_idx, i, p1.x, p1.y, p2.x, p2.y, seg_len);
-                }
-            }
+            // Debug: Check if ring is closed BEFORE rounding
+            let first_before = exterior.first();
+            let last_before = exterior.last();
+            let was_closed_before = if let (Some(f), Some(l)) = (first_before, last_before) {
+                f.x == l.x && f.y == l.y
+            } else {
+                false
+            };
 
             // Add exterior ring (must be closed for GeoJSON)
             let mut exterior_coords: Vec<Vec<f64>> = exterior
@@ -780,16 +778,25 @@ pub fn generate_isobands_phase2(grid: &GeoGrid, lower: f64, upper: f64) -> Resul
                 ])
                 .collect();
 
-            // Debug: Check AFTER rounding but BEFORE closing
-            for i in 0..exterior_coords.len().saturating_sub(1) {
-                let p1 = &exterior_coords[i];
-                let p2 = &exterior_coords[i + 1];
-                let dx = p2[0] - p1[0];
-                let dy = p2[1] - p1[1];
-                let seg_len = (dx * dx + dy * dy).sqrt();
-                if seg_len > 10.0 {
-                    eprintln!("🚨 LONG SEGMENT AFTER ROUNDING (before close) in polygon {}: segment {} from ({:.6},{:.6}) to ({:.6},{:.6}), length={:.2}°",
-                        poly_idx, i, p1[0], p1[1], p2[0], p2[1], seg_len);
+            // Debug: Check if ring is closed AFTER rounding
+            let first_after = exterior_coords.first();
+            let last_after = exterior_coords.last();
+            let is_closed_after = if let (Some(f), Some(l)) = (first_after, last_after) {
+                (f[0] - l[0]).abs() < 1e-10 && (f[1] - l[1]).abs() < 1e-10
+            } else {
+                false
+            };
+
+            if was_closed_before && !is_closed_after {
+                // Ring WAS closed before rounding but NOT after - this is the bug!
+                if let (Some(f_before), Some(l_before), Some(f_after), Some(l_after)) =
+                    (first_before, last_before, first_after, last_after) {
+                    eprintln!("🔍 POLYGON {} ROUNDING CHANGED CLOSURE:", poly_idx);
+                    eprintln!("   Before rounding: first=({:.12},{:.12}) last=({:.12},{:.12}) [identical={}]",
+                        f_before.x, f_before.y, l_before.x, l_before.y, f_before.x == l_before.x && f_before.y == l_before.y);
+                    eprintln!("   After rounding:  first=({:.12},{:.12}) last=({:.12},{:.12}) [identical={}]",
+                        f_after[0], f_after[1], l_after[0], l_after[1],
+                        (f_after[0] - l_after[0]).abs() < 1e-10 && (f_after[1] - l_after[1]).abs() < 1e-10);
                 }
             }
 
@@ -804,6 +811,8 @@ pub fn generate_isobands_phase2(grid: &GeoGrid, lower: f64, upper: f64) -> Resul
 
                     if distance > epsilon {
                         // Ring not closed after rounding - close it with the ROUNDED first point
+                        eprintln!("🚨 APPENDING FIRST TO CLOSE: polygon {} has distance={:.12} between first ({:.6},{:.6}) and last ({:.6},{:.6})",
+                            poly_idx, distance, first[0], first[1], last[0], last[1]);
                         exterior_coords.push(first);
                     }
                     // else: Ring already closed, no need to duplicate
