@@ -17,6 +17,10 @@ pub struct CellWithEdges {
     pub cleared: bool,
     /// Total number of edges this cell started with (for Java-compatible cleared logic)
     total_edge_count: usize,
+    /// Cell configuration value (0-170 for 3-level, 0-15 for 2-level)
+    pub config: u8,
+    /// Corner values: (tl, tr, br, bl)
+    pub corners: (f64, f64, f64, f64),
 }
 
 impl CellWithEdges {
@@ -28,6 +32,21 @@ impl CellWithEdges {
             used_edges: 0,
             cleared: false,
             total_edge_count: total_edges,
+            config: 0,
+            corners: (0.0, 0.0, 0.0, 0.0),
+        }
+    }
+
+    /// Create a new cell with edges and configuration info
+    pub fn new_with_config(shape: CellShape, config: u8, corners: (f64, f64, f64, f64)) -> Self {
+        let total_edges = shape.edges.len();
+        Self {
+            shape,
+            used_edges: 0,
+            cleared: false,
+            total_edge_count: total_edges,
+            config,
+            corners,
         }
     }
 
@@ -183,12 +202,13 @@ pub fn trace_ring(
         };
 
         if tmp_edges.is_empty() {
+            let (tl, tr, br, bl) = cell.corners;
             if let Some(ref edge) = current_edge {
-                eprintln!("⚠️ trace_ring at ({},{}) STOPPED: No edges at ({},{}) from point ({:.6},{:.6}), {} edges collected",
-                    start_row, start_col, current_row, current_col, edge.end.x, edge.end.y, all_edges.len());
+                eprintln!("⚠️ trace_ring at ({},{}) STOPPED: No edges at ({},{}) from point ({:.6},{:.6}), config={}, corners=[{:.2},{:.2},{:.2},{:.2}], {} edges collected",
+                    start_row, start_col, current_row, current_col, edge.end.x, edge.end.y, cell.config, tl, tr, br, bl, all_edges.len());
             } else {
-                eprintln!("⚠️ trace_ring at ({},{}) STOPPED: No edges at ({},{}), {} edges collected",
-                    start_row, start_col, current_row, current_col, all_edges.len());
+                eprintln!("⚠️ trace_ring at ({},{}) STOPPED: No edges at ({},{}), config={}, corners=[{:.2},{:.2},{:.2},{:.2}], {} edges collected",
+                    start_row, start_col, current_row, current_col, cell.config, tl, tr, br, bl, all_edges.len());
             }
             break;
         }

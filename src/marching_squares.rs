@@ -732,7 +732,8 @@ pub fn generate_isobands_phase2(grid: &GeoGrid, lower: f64, upper: f64) -> Resul
                             start.x, start.y, edge.end.x, edge.end.y, edge.move_dir);
                     }
                 }
-                cell_row.push(Some(CellWithEdges::new(shape)));
+                let corners = (tl.value as f64, tr.value as f64, br.value as f64, bl.value as f64);
+                cell_row.push(Some(CellWithEdges::new_with_config(shape, config, corners)));
             } else {
                 cell_row.push(None);
             }
