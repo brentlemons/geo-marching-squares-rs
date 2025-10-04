@@ -54,18 +54,13 @@ pub fn interpolate_point(
     point1: &Point,
     smoothing_factor: f64,
 ) -> Point {
-    // Handle degenerate case where value0 == value1
-    let value_diff = value1 - value0;
-    if value_diff.abs() < 1e-10 {
-        // No gradient - return midpoint (full precision, matches Java)
-        return Point::from_lon_lat(
-            (point0.x + point1.x) / 2.0,
-            (point0.y + point1.y) / 2.0,
-        );
-    }
+    // CRITICAL: Match Java behavior exactly - do NOT handle degenerate case!
+    // Java allows division by zero, creating NaN coordinates which are filtered later.
+    // If we return midpoint here, we create valid edges with identical coordinates
+    // across many cells, causing incorrect edge tracing (diagonal artifacts).
 
-    // Linear interpolation factor
-    let mu = (level - value0) / value_diff;
+    // Linear interpolation factor (may be NaN or Inf if value0 == value1)
+    let mu = (level - value0) / (value1 - value0);
 
     // Apply cosine smoothing
     let mu2 = (1.0 - (mu * PI).cos()) / 2.0;
@@ -181,18 +176,11 @@ pub fn interpolate_point_great_circle(
     point1: &Point,
     smoothing_factor: f64,
 ) -> Point {
-    // Handle degenerate case where value0 == value1
-    let value_diff = value1 - value0;
-    if value_diff.abs() < 1e-10 {
-        // No gradient - return midpoint (full precision, matches Java)
-        return Point::from_lon_lat(
-            (point0.x + point1.x) / 2.0,
-            (point0.y + point1.y) / 2.0,
-        );
-    }
+    // CRITICAL: Match Java behavior exactly - do NOT handle degenerate case!
+    // Java allows division by zero, creating NaN coordinates which are filtered later.
 
-    // Linear interpolation factor
-    let mu = (level - value0) / value_diff;
+    // Linear interpolation factor (may be NaN or Inf if value0 == value1)
+    let mu = (level - value0) / (value1 - value0);
 
     // Apply cosine smoothing
     let mu2 = (1.0 - (mu * PI).cos()) / 2.0;

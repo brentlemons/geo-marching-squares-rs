@@ -49,10 +49,16 @@ impl fmt::Debug for CellShape {
 impl CellShape {
     /// Create a cell shape directly from edges (for testing)
     /// Converts Vec<Edge> to HashMap<Point, Edge> keyed by start point
+    /// Filters out edges with NaN or infinite coordinates (matches Java behavior)
     pub fn new(edges: Vec<Edge>) -> Self {
         let mut edge_map = HashMap::new();
         for edge in edges {
-            edge_map.insert(edge.start, edge);
+            // Filter out edges with NaN or infinite coordinates
+            // This matches Java behavior where division by zero creates NaN points
+            if edge.start.x.is_finite() && edge.start.y.is_finite() &&
+               edge.end.x.is_finite() && edge.end.y.is_finite() {
+                edge_map.insert(edge.start, edge);
+            }
         }
         Self { edges: edge_map }
     }
