@@ -248,6 +248,22 @@ pub fn trace_ring(
         points.push(edge.end.clone());
     }
 
+    // Debug: Check for long segments in the final ring
+    for i in 0..points.len().saturating_sub(1) {
+        let p1 = &points[i];
+        let p2 = &points[i + 1];
+        let seg_length = ((p2.x - p1.x).powi(2) + (p2.y - p1.y).powi(2)).sqrt();
+        if seg_length > 10.0 {
+            eprintln!("🚨 LONG SEGMENT IN RING: segment {} from ({:.6},{:.6}) to ({:.6},{:.6}), length={:.2}°",
+                i, p1.x, p1.y, p2.x, p2.y, seg_length);
+            eprintln!("   Ring has {} total points, {} edges traced", points.len(), all_edges.len());
+            if i > 0 {
+                let prev = &points[i - 1];
+                eprintln!("   Previous point: ({:.6},{:.6})", prev.x, prev.y);
+            }
+        }
+    }
+
     if points.len() >= 3 {
         Some(points)
     } else {
