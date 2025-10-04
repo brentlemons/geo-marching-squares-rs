@@ -161,10 +161,16 @@ pub fn trace_ring(
             .and_then(|c| c.as_ref())
         {
             Some(c) => c,
-            None => break,
+            None => {
+                eprintln!("⚠️ trace_ring at ({},{}) STOPPED: Cell not found at ({},{}), {} edges collected",
+                    start_row, start_col, current_row, current_col, all_edges.len());
+                break;
+            }
         };
 
         if cell.is_cleared() {
+            eprintln!("⚠️ trace_ring at ({},{}) STOPPED: Cell cleared at ({},{}), {} edges collected",
+                start_row, start_col, current_row, current_col, all_edges.len());
             break;
         }
 
@@ -177,6 +183,13 @@ pub fn trace_ring(
         };
 
         if tmp_edges.is_empty() {
+            if let Some(ref edge) = current_edge {
+                eprintln!("⚠️ trace_ring at ({},{}) STOPPED: No edges at ({},{}) from point ({:.6},{:.6}), {} edges collected",
+                    start_row, start_col, current_row, current_col, edge.end.x, edge.end.y, all_edges.len());
+            } else {
+                eprintln!("⚠️ trace_ring at ({},{}) STOPPED: No edges at ({},{}), {} edges collected",
+                    start_row, start_col, current_row, current_col, all_edges.len());
+            }
             break;
         }
 
