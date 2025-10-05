@@ -6,17 +6,18 @@ use crate::types::{Edge, Move, Point, Side};
 #[allow(clippy::too_many_arguments)]
 pub(super) fn saddle_153(
     edges: &mut Vec<Edge>,
-    _tl_pt: &Point, tr_pt: &Point, _br_pt: &Point, bl_pt: &Point,
+    tl_pt: &Point, tr_pt: &Point, br_pt: &Point, bl_pt: &Point,
     tl_val: f64, tr_val: f64, br_val: f64, bl_val: f64,
     lower: f64, upper: f64, _smoothing: f64,
     is_top: bool, is_right: bool, is_bottom: bool, is_left: bool,
-    interp: &impl Fn(f64, Side) -> Point,
+    _interp: &impl Fn(f64, Side) -> Point,
+    get_edge_point: &impl Fn(&Point, f64, Side) -> Point,
 ) {
     let average = (tl_val + tr_val + br_val + bl_val) / 4.0;
 
     if average >= upper {
-        let p0 = interp(upper, Side::Right);
-        let p1 = interp(upper, Side::Top);
+        let p0 = get_edge_point(tr_pt, tr_val, Side::Right);
+        let p1 = get_edge_point(tr_pt, tr_val, Side::Top);
         edges.push(Edge::new(p0.clone(), p1.clone(), Move::Up));
         if is_top {
             edges.push(Edge::new(p1.clone(), tr_pt.clone(), Move::Right));
@@ -25,8 +26,8 @@ pub(super) fn saddle_153(
             edges.push(Edge::new(tr_pt.clone(), p0.clone(), Move::None));
         }
 
-        let p3 = interp(upper, Side::Left);
-        let p4 = interp(upper, Side::Bottom);
+        let p3 = get_edge_point(bl_pt, bl_val, Side::Left);
+        let p4 = get_edge_point(bl_pt, bl_val, Side::Bottom);
         edges.push(Edge::new(p3.clone(), p4.clone(), Move::Down));
         if is_bottom {
             edges.push(Edge::new(p4.clone(), bl_pt.clone(), Move::Left));
@@ -35,10 +36,10 @@ pub(super) fn saddle_153(
             edges.push(Edge::new(bl_pt.clone(), p3.clone(), Move::None));
         }
     } else if average >= lower && average < upper {
-        let p0 = interp(upper, Side::Right);
-        let p1 = interp(upper, Side::Bottom);
-        let p3 = interp(upper, Side::Left);
-        let p4 = interp(upper, Side::Top);
+        let p0 = get_edge_point(tr_pt, tr_val, Side::Right);
+        let p1 = get_edge_point(br_pt, br_val, Side::Bottom);
+        let p3 = get_edge_point(bl_pt, bl_val, Side::Left);
+        let p4 = get_edge_point(tl_pt, tl_val, Side::Top);
 
         edges.push(Edge::new(p0.clone(), p1.clone(), Move::Down));
         if is_bottom {
@@ -61,17 +62,18 @@ pub(super) fn saddle_153(
 #[allow(clippy::too_many_arguments)]
 pub(super) fn saddle_102(
     edges: &mut Vec<Edge>,
-    tl_pt: &Point, _tr_pt: &Point, br_pt: &Point, _bl_pt: &Point,
+    tl_pt: &Point, tr_pt: &Point, br_pt: &Point, bl_pt: &Point,
     tl_val: f64, tr_val: f64, br_val: f64, bl_val: f64,
     lower: f64, upper: f64, _smoothing: f64,
     is_top: bool, is_right: bool, is_bottom: bool, is_left: bool,
-    interp: &impl Fn(f64, Side) -> Point,
+    _interp: &impl Fn(f64, Side) -> Point,
+    get_edge_point: &impl Fn(&Point, f64, Side) -> Point,
 ) {
     let average = (tl_val + tr_val + br_val + bl_val) / 4.0;
 
     if average >= upper {
-        let p0 = interp(upper, Side::Top);
-        let p1 = interp(upper, Side::Left);
+        let p0 = get_edge_point(tl_pt, tl_val, Side::Top);
+        let p1 = get_edge_point(tl_pt, tl_val, Side::Left);
         edges.push(Edge::new(p0.clone(), p1.clone(), Move::Left));
         if is_left {
             edges.push(Edge::new(p1.clone(), tl_pt.clone(), Move::Up));
@@ -80,8 +82,8 @@ pub(super) fn saddle_102(
             edges.push(Edge::new(tl_pt.clone(), p0.clone(), Move::None));
         }
 
-        let p3 = interp(upper, Side::Bottom);
-        let p4 = interp(upper, Side::Right);
+        let p3 = get_edge_point(br_pt, br_val, Side::Bottom);
+        let p4 = get_edge_point(br_pt, br_val, Side::Right);
         edges.push(Edge::new(p3.clone(), p4.clone(), Move::Right));
         if is_right {
             edges.push(Edge::new(p4.clone(), br_pt.clone(), Move::Down));
@@ -90,10 +92,10 @@ pub(super) fn saddle_102(
             edges.push(Edge::new(br_pt.clone(), p3.clone(), Move::None));
         }
     } else if average >= lower && average < upper {
-        let p0 = interp(upper, Side::Top);
-        let p1 = interp(upper, Side::Right);
-        let p3 = interp(upper, Side::Bottom);
-        let p4 = interp(upper, Side::Left);
+        let p0 = get_edge_point(tl_pt, tl_val, Side::Top);
+        let p1 = get_edge_point(tr_pt, tr_val, Side::Right);
+        let p3 = get_edge_point(br_pt, br_val, Side::Bottom);
+        let p4 = get_edge_point(bl_pt, bl_val, Side::Left);
 
         edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
         if is_right {
@@ -116,17 +118,18 @@ pub(super) fn saddle_102(
 #[allow(clippy::too_many_arguments)]
 pub(super) fn saddle_68(
     edges: &mut Vec<Edge>,
-    tl_pt: &Point, _tr_pt: &Point, br_pt: &Point, _bl_pt: &Point,
+    tl_pt: &Point, tr_pt: &Point, br_pt: &Point, bl_pt: &Point,
     tl_val: f64, tr_val: f64, br_val: f64, bl_val: f64,
     lower: f64, upper: f64, _smoothing: f64,
     is_top: bool, is_right: bool, is_bottom: bool, is_left: bool,
-    interp: &impl Fn(f64, Side) -> Point,
+    _interp: &impl Fn(f64, Side) -> Point,
+    get_edge_point: &impl Fn(&Point, f64, Side) -> Point,
 ) {
     let average = (tl_val + tr_val + br_val + bl_val) / 4.0;
 
     if average < lower {
-        let p0 = interp(lower, Side::Top);
-        let p1 = interp(lower, Side::Left);
+        let p0 = get_edge_point(tl_pt, tl_val, Side::Top);
+        let p1 = get_edge_point(tl_pt, tl_val, Side::Left);
         edges.push(Edge::new(p0.clone(), p1.clone(), Move::Left));
         if is_left {
             edges.push(Edge::new(p1.clone(), tl_pt.clone(), Move::Up));
@@ -135,8 +138,8 @@ pub(super) fn saddle_68(
             edges.push(Edge::new(tl_pt.clone(), p0.clone(), Move::None));
         }
 
-        let p3 = interp(lower, Side::Bottom);
-        let p4 = interp(lower, Side::Right);
+        let p3 = get_edge_point(br_pt, br_val, Side::Bottom);
+        let p4 = get_edge_point(br_pt, br_val, Side::Right);
         edges.push(Edge::new(p3.clone(), p4.clone(), Move::Right));
         if is_right {
             edges.push(Edge::new(p4.clone(), br_pt.clone(), Move::Down));
@@ -145,10 +148,10 @@ pub(super) fn saddle_68(
             edges.push(Edge::new(br_pt.clone(), p3.clone(), Move::None));
         }
     } else if average >= lower && average < upper {
-        let p0 = interp(lower, Side::Top);
-        let p1 = interp(lower, Side::Right);
-        let p3 = interp(lower, Side::Bottom);
-        let p4 = interp(lower, Side::Left);
+        let p0 = get_edge_point(tl_pt, tl_val, Side::Top);
+        let p1 = get_edge_point(tr_pt, tr_val, Side::Right);
+        let p3 = get_edge_point(br_pt, br_val, Side::Bottom);
+        let p4 = get_edge_point(bl_pt, bl_val, Side::Left);
 
         edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
         if is_right {
@@ -171,17 +174,18 @@ pub(super) fn saddle_68(
 #[allow(clippy::too_many_arguments)]
 pub(super) fn saddle_17(
     edges: &mut Vec<Edge>,
-    _tl_pt: &Point, tr_pt: &Point, _br_pt: &Point, bl_pt: &Point,
+    tl_pt: &Point, tr_pt: &Point, br_pt: &Point, bl_pt: &Point,
     tl_val: f64, tr_val: f64, br_val: f64, bl_val: f64,
     lower: f64, upper: f64, _smoothing: f64,
     is_top: bool, is_right: bool, is_bottom: bool, is_left: bool,
-    interp: &impl Fn(f64, Side) -> Point,
+    _interp: &impl Fn(f64, Side) -> Point,
+    get_edge_point: &impl Fn(&Point, f64, Side) -> Point,
 ) {
     let average = (tl_val + tr_val + br_val + bl_val) / 4.0;
 
     if average < lower {
-        let p0 = interp(lower, Side::Right);
-        let p1 = interp(lower, Side::Top);
+        let p0 = get_edge_point(tr_pt, tr_val, Side::Right);
+        let p1 = get_edge_point(tr_pt, tr_val, Side::Top);
         edges.push(Edge::new(p0.clone(), p1.clone(), Move::Up));
         if is_top {
             edges.push(Edge::new(p1.clone(), tr_pt.clone(), Move::Right));
@@ -190,8 +194,8 @@ pub(super) fn saddle_17(
             edges.push(Edge::new(tr_pt.clone(), p0.clone(), Move::None));
         }
 
-        let p3 = interp(lower, Side::Left);
-        let p4 = interp(lower, Side::Bottom);
+        let p3 = get_edge_point(bl_pt, bl_val, Side::Left);
+        let p4 = get_edge_point(bl_pt, bl_val, Side::Bottom);
         edges.push(Edge::new(p3.clone(), p4.clone(), Move::Down));
         if is_bottom {
             edges.push(Edge::new(p4.clone(), bl_pt.clone(), Move::Left));
@@ -200,10 +204,10 @@ pub(super) fn saddle_17(
             edges.push(Edge::new(bl_pt.clone(), p3.clone(), Move::None));
         }
     } else if average >= lower && average < upper {
-        let p0 = interp(lower, Side::Right);
-        let p1 = interp(lower, Side::Bottom);
-        let p3 = interp(lower, Side::Left);
-        let p4 = interp(lower, Side::Top);
+        let p0 = get_edge_point(tr_pt, tr_val, Side::Right);
+        let p1 = get_edge_point(br_pt, br_val, Side::Bottom);
+        let p3 = get_edge_point(bl_pt, bl_val, Side::Left);
+        let p4 = get_edge_point(tl_pt, tl_val, Side::Top);
 
         edges.push(Edge::new(p0.clone(), p1.clone(), Move::Down));
         if is_bottom {
@@ -226,19 +230,20 @@ pub(super) fn saddle_17(
 #[allow(clippy::too_many_arguments)]
 pub(super) fn saddle_136(
     edges: &mut Vec<Edge>,
-    _tl_pt: &Point, _tr_pt: &Point, _br_pt: &Point, _bl_pt: &Point,
+    tl_pt: &Point, tr_pt: &Point, br_pt: &Point, bl_pt: &Point,
     tl_val: f64, tr_val: f64, br_val: f64, bl_val: f64,
     lower: f64, upper: f64, _smoothing: f64,
     is_top: bool, is_right: bool, is_bottom: bool, is_left: bool,
-    interp: &impl Fn(f64, Side) -> Point,
+    _interp: &impl Fn(f64, Side) -> Point,
+    get_edge_point: &impl Fn(&Point, f64, Side) -> Point,
 ) {
     let average = (tl_val + tr_val + br_val + bl_val) / 4.0;
 
     if average < lower {
-        let p0 = interp(lower, Side::Top);
-        let p1 = interp(lower, Side::Left);
-        let p2 = interp(upper, Side::Left);
-        let p3 = interp(upper, Side::Top);
+        let p0 = get_edge_point(tl_pt, tl_val, Side::Top);
+        let p1 = get_edge_point(tl_pt, tl_val, Side::Left);
+        let p2 = get_edge_point(tl_pt, tl_val, Side::Left);
+        let p3 = get_edge_point(tl_pt, tl_val, Side::Top);
         edges.push(Edge::new(p0.clone(), p1.clone(), Move::Left));
         if is_left {
             edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
@@ -248,10 +253,10 @@ pub(super) fn saddle_136(
             edges.push(Edge::new(p3.clone(), p0.clone(), Move::None));
         }
 
-        let p4 = interp(upper, Side::Right);
-        let p5 = interp(upper, Side::Bottom);
-        let p6 = interp(lower, Side::Bottom);
-        let p7 = interp(lower, Side::Right);
+        let p4 = get_edge_point(br_pt, br_val, Side::Right);
+        let p5 = get_edge_point(br_pt, br_val, Side::Bottom);
+        let p6 = get_edge_point(br_pt, br_val, Side::Bottom);
+        let p7 = get_edge_point(br_pt, br_val, Side::Right);
         edges.push(Edge::new(p4.clone(), p5.clone(), Move::Down));
         if is_bottom {
             edges.push(Edge::new(p5.clone(), p6.clone(), Move::None));
@@ -261,10 +266,10 @@ pub(super) fn saddle_136(
             edges.push(Edge::new(p7.clone(), p4.clone(), Move::None));
         }
     } else if average >= upper {
-        let p0 = interp(lower, Side::Top);
-        let p1 = interp(lower, Side::Right);
-        let p2 = interp(upper, Side::Right);
-        let p3 = interp(upper, Side::Top);
+        let p0 = get_edge_point(tr_pt, tr_val, Side::Top);
+        let p1 = get_edge_point(tr_pt, tr_val, Side::Right);
+        let p2 = get_edge_point(tr_pt, tr_val, Side::Right);
+        let p3 = get_edge_point(tr_pt, tr_val, Side::Top);
         edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
         if is_right {
             edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
@@ -274,10 +279,10 @@ pub(super) fn saddle_136(
             edges.push(Edge::new(p3.clone(), p0.clone(), Move::None));
         }
 
-        let p4 = interp(lower, Side::Bottom);
-        let p5 = interp(lower, Side::Left);
-        let p6 = interp(upper, Side::Left);
-        let p7 = interp(upper, Side::Bottom);
+        let p4 = get_edge_point(bl_pt, bl_val, Side::Bottom);
+        let p5 = get_edge_point(bl_pt, bl_val, Side::Left);
+        let p6 = get_edge_point(bl_pt, bl_val, Side::Left);
+        let p7 = get_edge_point(bl_pt, bl_val, Side::Bottom);
         edges.push(Edge::new(p4.clone(), p5.clone(), Move::Left));
         if is_left {
             edges.push(Edge::new(p5.clone(), p6.clone(), Move::None));
@@ -287,14 +292,14 @@ pub(super) fn saddle_136(
             edges.push(Edge::new(p7.clone(), p4.clone(), Move::None));
         }
     } else {
-        let p0 = interp(lower, Side::Top);
-        let p1 = interp(lower, Side::Right);
-        let p2 = interp(upper, Side::Right);
-        let p3 = interp(upper, Side::Bottom);
-        let p4 = interp(lower, Side::Bottom);
-        let p5 = interp(lower, Side::Left);
-        let p6 = interp(upper, Side::Left);
-        let p7 = interp(upper, Side::Top);
+        let p0 = get_edge_point(tl_pt, tl_val, Side::Top);
+        let p1 = get_edge_point(tr_pt, tr_val, Side::Right);
+        let p2 = get_edge_point(tr_pt, tr_val, Side::Right);
+        let p3 = get_edge_point(br_pt, br_val, Side::Bottom);
+        let p4 = get_edge_point(br_pt, br_val, Side::Bottom);
+        let p5 = get_edge_point(bl_pt, bl_val, Side::Left);
+        let p6 = get_edge_point(bl_pt, bl_val, Side::Left);
+        let p7 = get_edge_point(tl_pt, tl_val, Side::Top);
         edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
         if is_right {
             edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
@@ -318,19 +323,20 @@ pub(super) fn saddle_136(
 #[allow(clippy::too_many_arguments)]
 pub(super) fn saddle_34(
     edges: &mut Vec<Edge>,
-    _tl_pt: &Point, _tr_pt: &Point, _br_pt: &Point, _bl_pt: &Point,
+    tl_pt: &Point, tr_pt: &Point, br_pt: &Point, bl_pt: &Point,
     tl_val: f64, tr_val: f64, br_val: f64, bl_val: f64,
     lower: f64, upper: f64, _smoothing: f64,
     is_top: bool, is_right: bool, is_bottom: bool, is_left: bool,
-    interp: &impl Fn(f64, Side) -> Point,
+    _interp: &impl Fn(f64, Side) -> Point,
+    get_edge_point: &impl Fn(&Point, f64, Side) -> Point,
 ) {
     let average = (tl_val + tr_val + br_val + bl_val) / 4.0;
 
     if average >= upper {
-        let p0 = interp(upper, Side::Top);
-        let p1 = interp(upper, Side::Left);
-        let p2 = interp(lower, Side::Left);
-        let p3 = interp(lower, Side::Top);
+        let p0 = get_edge_point(tl_pt, tl_val, Side::Top);
+        let p1 = get_edge_point(tl_pt, tl_val, Side::Left);
+        let p2 = get_edge_point(tl_pt, tl_val, Side::Left);
+        let p3 = get_edge_point(tl_pt, tl_val, Side::Top);
         edges.push(Edge::new(p0.clone(), p1.clone(), Move::Left));
         if is_left {
             edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
@@ -340,10 +346,10 @@ pub(super) fn saddle_34(
             edges.push(Edge::new(p3.clone(), p0.clone(), Move::None));
         }
 
-        let p4 = interp(lower, Side::Right);
-        let p5 = interp(lower, Side::Bottom);
-        let p6 = interp(upper, Side::Bottom);
-        let p7 = interp(upper, Side::Right);
+        let p4 = get_edge_point(br_pt, br_val, Side::Right);
+        let p5 = get_edge_point(br_pt, br_val, Side::Bottom);
+        let p6 = get_edge_point(br_pt, br_val, Side::Bottom);
+        let p7 = get_edge_point(br_pt, br_val, Side::Right);
         edges.push(Edge::new(p4.clone(), p5.clone(), Move::Down));
         if is_bottom {
             edges.push(Edge::new(p5.clone(), p6.clone(), Move::None));
@@ -353,10 +359,10 @@ pub(super) fn saddle_34(
             edges.push(Edge::new(p7.clone(), p4.clone(), Move::None));
         }
     } else if average < lower {
-        let p0 = interp(upper, Side::Top);
-        let p1 = interp(upper, Side::Right);
-        let p2 = interp(lower, Side::Right);
-        let p3 = interp(lower, Side::Top);
+        let p0 = get_edge_point(tr_pt, tr_val, Side::Top);
+        let p1 = get_edge_point(tr_pt, tr_val, Side::Right);
+        let p2 = get_edge_point(tr_pt, tr_val, Side::Right);
+        let p3 = get_edge_point(tr_pt, tr_val, Side::Top);
         edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
         if is_right {
             edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
@@ -366,10 +372,10 @@ pub(super) fn saddle_34(
             edges.push(Edge::new(p3.clone(), p0.clone(), Move::None));
         }
 
-        let p4 = interp(upper, Side::Bottom);
-        let p5 = interp(upper, Side::Left);
-        let p6 = interp(lower, Side::Left);
-        let p7 = interp(lower, Side::Bottom);
+        let p4 = get_edge_point(bl_pt, bl_val, Side::Bottom);
+        let p5 = get_edge_point(bl_pt, bl_val, Side::Left);
+        let p6 = get_edge_point(bl_pt, bl_val, Side::Left);
+        let p7 = get_edge_point(bl_pt, bl_val, Side::Bottom);
         edges.push(Edge::new(p4.clone(), p5.clone(), Move::Left));
         if is_left {
             edges.push(Edge::new(p5.clone(), p6.clone(), Move::None));
@@ -379,14 +385,14 @@ pub(super) fn saddle_34(
             edges.push(Edge::new(p7.clone(), p4.clone(), Move::None));
         }
     } else {
-        let p0 = interp(upper, Side::Top);
-        let p1 = interp(upper, Side::Right);
-        let p2 = interp(lower, Side::Right);
-        let p3 = interp(lower, Side::Bottom);
-        let p4 = interp(upper, Side::Bottom);
-        let p5 = interp(upper, Side::Left);
-        let p6 = interp(lower, Side::Left);
-        let p7 = interp(lower, Side::Top);
+        let p0 = get_edge_point(tl_pt, tl_val, Side::Top);
+        let p1 = get_edge_point(tr_pt, tr_val, Side::Right);
+        let p2 = get_edge_point(tr_pt, tr_val, Side::Right);
+        let p3 = get_edge_point(br_pt, br_val, Side::Bottom);
+        let p4 = get_edge_point(br_pt, br_val, Side::Bottom);
+        let p5 = get_edge_point(bl_pt, bl_val, Side::Left);
+        let p6 = get_edge_point(bl_pt, bl_val, Side::Left);
+        let p7 = get_edge_point(tl_pt, tl_val, Side::Top);
         edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
         if is_right {
             edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
@@ -410,17 +416,18 @@ pub(super) fn saddle_34(
 #[allow(clippy::too_many_arguments)]
 pub(super) fn saddle_152(
     edges: &mut Vec<Edge>,
-    _tl_pt: &Point, tr_pt: &Point, _br_pt: &Point, _bl_pt: &Point,
+    tl_pt: &Point, tr_pt: &Point, br_pt: &Point, bl_pt: &Point,
     tl_val: f64, tr_val: f64, br_val: f64, bl_val: f64,
     lower: f64, upper: f64, _smoothing: f64,
     is_top: bool, is_right: bool, is_bottom: bool, is_left: bool,
-    interp: &impl Fn(f64, Side) -> Point,
+    _interp: &impl Fn(f64, Side) -> Point,
+    get_edge_point: &impl Fn(&Point, f64, Side) -> Point,
 ) {
     let average = (tl_val + tr_val + br_val + bl_val) / 4.0;
 
     if average < lower || average >= upper {
-        let p0 = interp(upper, Side::Right);
-        let p1 = interp(upper, Side::Top);
+        let p0 = get_edge_point(tr_pt, tr_val, Side::Right);
+        let p1 = get_edge_point(tr_pt, tr_val, Side::Top);
         edges.push(Edge::new(p0.clone(), p1.clone(), Move::Up));
         if is_top {
             edges.push(Edge::new(p1.clone(), tr_pt.clone(), Move::Right));
@@ -429,10 +436,10 @@ pub(super) fn saddle_152(
             edges.push(Edge::new(tr_pt.clone(), p0.clone(), Move::None));
         }
 
-        let p3 = interp(lower, Side::Bottom);
-        let p4 = interp(lower, Side::Left);
-        let p5 = interp(upper, Side::Left);
-        let p6 = interp(upper, Side::Bottom);
+        let p3 = get_edge_point(br_pt, br_val, Side::Bottom);
+        let p4 = get_edge_point(bl_pt, bl_val, Side::Left);
+        let p5 = get_edge_point(bl_pt, bl_val, Side::Left);
+        let p6 = get_edge_point(br_pt, br_val, Side::Bottom);
         edges.push(Edge::new(p3.clone(), p4.clone(), Move::Left));
         if is_left {
             edges.push(Edge::new(p4.clone(), p5.clone(), Move::None));
@@ -442,12 +449,12 @@ pub(super) fn saddle_152(
             edges.push(Edge::new(p6.clone(), p3.clone(), Move::None));
         }
     } else if average >= lower && average < upper {
-        let p0 = interp(upper, Side::Right);
-        let p1 = interp(upper, Side::Bottom);
-        let p2 = interp(lower, Side::Bottom);
-        let p3 = interp(lower, Side::Left);
-        let p4 = interp(upper, Side::Left);
-        let p5 = interp(upper, Side::Top);
+        let p0 = get_edge_point(tr_pt, tr_val, Side::Right);
+        let p1 = get_edge_point(br_pt, br_val, Side::Bottom);
+        let p2 = get_edge_point(br_pt, br_val, Side::Bottom);
+        let p3 = get_edge_point(bl_pt, bl_val, Side::Left);
+        let p4 = get_edge_point(bl_pt, bl_val, Side::Left);
+        let p5 = get_edge_point(tl_pt, tl_val, Side::Top);
         edges.push(Edge::new(p0.clone(), p1.clone(), Move::Down));
         if is_bottom {
             edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
@@ -470,17 +477,18 @@ pub(super) fn saddle_152(
 #[allow(clippy::too_many_arguments)]
 pub(super) fn saddle_18(
     edges: &mut Vec<Edge>,
-    _tl_pt: &Point, tr_pt: &Point, _br_pt: &Point, _bl_pt: &Point,
+    tl_pt: &Point, tr_pt: &Point, br_pt: &Point, bl_pt: &Point,
     tl_val: f64, tr_val: f64, br_val: f64, bl_val: f64,
     lower: f64, upper: f64, _smoothing: f64,
     is_top: bool, is_right: bool, is_bottom: bool, is_left: bool,
-    interp: &impl Fn(f64, Side) -> Point,
+    _interp: &impl Fn(f64, Side) -> Point,
+    get_edge_point: &impl Fn(&Point, f64, Side) -> Point,
 ) {
     let average = (tl_val + tr_val + br_val + bl_val) / 4.0;
 
     if average < lower || average >= upper {
-        let p0 = interp(lower, Side::Right);
-        let p1 = interp(lower, Side::Top);
+        let p0 = get_edge_point(tr_pt, tr_val, Side::Right);
+        let p1 = get_edge_point(tr_pt, tr_val, Side::Top);
         edges.push(Edge::new(p0.clone(), p1.clone(), Move::Up));
         if is_top {
             edges.push(Edge::new(p1.clone(), tr_pt.clone(), Move::Right));
@@ -489,10 +497,10 @@ pub(super) fn saddle_18(
             edges.push(Edge::new(tr_pt.clone(), p0.clone(), Move::None));
         }
 
-        let p3 = interp(upper, Side::Bottom);
-        let p4 = interp(upper, Side::Left);
-        let p5 = interp(lower, Side::Left);
-        let p6 = interp(lower, Side::Bottom);
+        let p3 = get_edge_point(br_pt, br_val, Side::Bottom);
+        let p4 = get_edge_point(bl_pt, bl_val, Side::Left);
+        let p5 = get_edge_point(bl_pt, bl_val, Side::Left);
+        let p6 = get_edge_point(br_pt, br_val, Side::Bottom);
         edges.push(Edge::new(p3.clone(), p4.clone(), Move::Left));
         if is_left {
             edges.push(Edge::new(p4.clone(), p5.clone(), Move::None));
@@ -502,12 +510,12 @@ pub(super) fn saddle_18(
             edges.push(Edge::new(p6.clone(), p3.clone(), Move::None));
         }
     } else if average >= lower && average < upper {
-        let p0 = interp(lower, Side::Right);
-        let p1 = interp(lower, Side::Bottom);
-        let p2 = interp(upper, Side::Bottom);
-        let p3 = interp(upper, Side::Left);
-        let p4 = interp(lower, Side::Left);
-        let p5 = interp(lower, Side::Top);
+        let p0 = get_edge_point(tr_pt, tr_val, Side::Right);
+        let p1 = get_edge_point(br_pt, br_val, Side::Bottom);
+        let p2 = get_edge_point(br_pt, br_val, Side::Bottom);
+        let p3 = get_edge_point(bl_pt, bl_val, Side::Left);
+        let p4 = get_edge_point(bl_pt, bl_val, Side::Left);
+        let p5 = get_edge_point(tl_pt, tl_val, Side::Top);
         edges.push(Edge::new(p0.clone(), p1.clone(), Move::Down));
         if is_bottom {
             edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
@@ -530,19 +538,20 @@ pub(super) fn saddle_18(
 #[allow(clippy::too_many_arguments)]
 pub(super) fn saddle_137(
     edges: &mut Vec<Edge>,
-    _tl_pt: &Point, _tr_pt: &Point, _br_pt: &Point, bl_pt: &Point,
+    tl_pt: &Point, tr_pt: &Point, br_pt: &Point, bl_pt: &Point,
     tl_val: f64, tr_val: f64, br_val: f64, bl_val: f64,
     lower: f64, upper: f64, _smoothing: f64,
     is_top: bool, is_right: bool, is_bottom: bool, is_left: bool,
-    interp: &impl Fn(f64, Side) -> Point,
+    _interp: &impl Fn(f64, Side) -> Point,
+    get_edge_point: &impl Fn(&Point, f64, Side) -> Point,
 ) {
     let average = (tl_val + tr_val + br_val + bl_val) / 4.0;
 
     if average < lower || average >= upper {
-        let p0 = interp(lower, Side::Top);
-        let p1 = interp(lower, Side::Right);
-        let p2 = interp(upper, Side::Right);
-        let p3 = interp(upper, Side::Top);
+        let p0 = get_edge_point(tl_pt, tl_val, Side::Top);
+        let p1 = get_edge_point(tr_pt, tr_val, Side::Right);
+        let p2 = get_edge_point(tr_pt, tr_val, Side::Right);
+        let p3 = get_edge_point(tl_pt, tl_val, Side::Top);
         edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
         if is_right {
             edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
@@ -552,8 +561,8 @@ pub(super) fn saddle_137(
             edges.push(Edge::new(p3.clone(), p0.clone(), Move::None));
         }
 
-        let p4 = interp(upper, Side::Left);
-        let p5 = interp(upper, Side::Bottom);
+        let p4 = get_edge_point(bl_pt, bl_val, Side::Left);
+        let p5 = get_edge_point(bl_pt, bl_val, Side::Bottom);
         edges.push(Edge::new(p4.clone(), p5.clone(), Move::Down));
         if is_bottom {
             edges.push(Edge::new(p5.clone(), bl_pt.clone(), Move::Left));
@@ -562,12 +571,12 @@ pub(super) fn saddle_137(
             edges.push(Edge::new(bl_pt.clone(), p4.clone(), Move::None));
         }
     } else if average >= lower && average < upper {
-        let p0 = interp(lower, Side::Top);
-        let p1 = interp(lower, Side::Right);
-        let p2 = interp(upper, Side::Right);
-        let p3 = interp(upper, Side::Bottom);
-        let p5 = interp(upper, Side::Left);
-        let p6 = interp(upper, Side::Top);
+        let p0 = get_edge_point(tl_pt, tl_val, Side::Top);
+        let p1 = get_edge_point(tr_pt, tr_val, Side::Right);
+        let p2 = get_edge_point(tr_pt, tr_val, Side::Right);
+        let p3 = get_edge_point(br_pt, br_val, Side::Bottom);
+        let p5 = get_edge_point(bl_pt, bl_val, Side::Left);
+        let p6 = get_edge_point(tl_pt, tl_val, Side::Top);
         edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
         if is_right {
             edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
@@ -590,19 +599,20 @@ pub(super) fn saddle_137(
 #[allow(clippy::too_many_arguments)]
 pub(super) fn saddle_33(
     edges: &mut Vec<Edge>,
-    _tl_pt: &Point, _tr_pt: &Point, _br_pt: &Point, bl_pt: &Point,
+    tl_pt: &Point, tr_pt: &Point, br_pt: &Point, bl_pt: &Point,
     tl_val: f64, tr_val: f64, br_val: f64, bl_val: f64,
     lower: f64, upper: f64, _smoothing: f64,
     is_top: bool, is_right: bool, is_bottom: bool, is_left: bool,
-    interp: &impl Fn(f64, Side) -> Point,
+    _interp: &impl Fn(f64, Side) -> Point,
+    get_edge_point: &impl Fn(&Point, f64, Side) -> Point,
 ) {
     let average = (tl_val + tr_val + br_val + bl_val) / 4.0;
 
     if average < lower || average >= upper {
-        let p0 = interp(upper, Side::Top);
-        let p1 = interp(upper, Side::Right);
-        let p2 = interp(lower, Side::Right);
-        let p3 = interp(lower, Side::Top);
+        let p0 = get_edge_point(tl_pt, tl_val, Side::Top);
+        let p1 = get_edge_point(tr_pt, tr_val, Side::Right);
+        let p2 = get_edge_point(tr_pt, tr_val, Side::Right);
+        let p3 = get_edge_point(tl_pt, tl_val, Side::Top);
         edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
         if is_right {
             edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
@@ -612,8 +622,8 @@ pub(super) fn saddle_33(
             edges.push(Edge::new(p3.clone(), p0.clone(), Move::None));
         }
 
-        let p4 = interp(lower, Side::Left);
-        let p5 = interp(lower, Side::Bottom);
+        let p4 = get_edge_point(bl_pt, bl_val, Side::Left);
+        let p5 = get_edge_point(bl_pt, bl_val, Side::Bottom);
         edges.push(Edge::new(p4.clone(), p5.clone(), Move::Down));
         if is_bottom {
             edges.push(Edge::new(p5.clone(), bl_pt.clone(), Move::Left));
@@ -622,12 +632,12 @@ pub(super) fn saddle_33(
             edges.push(Edge::new(bl_pt.clone(), p4.clone(), Move::None));
         }
     } else if average >= lower && average < upper {
-        let p0 = interp(upper, Side::Top);
-        let p1 = interp(upper, Side::Right);
-        let p2 = interp(lower, Side::Right);
-        let p3 = interp(lower, Side::Bottom);
-        let p5 = interp(lower, Side::Left);
-        let p6 = interp(lower, Side::Top);
+        let p0 = get_edge_point(tl_pt, tl_val, Side::Top);
+        let p1 = get_edge_point(tr_pt, tr_val, Side::Right);
+        let p2 = get_edge_point(tr_pt, tr_val, Side::Right);
+        let p3 = get_edge_point(br_pt, br_val, Side::Bottom);
+        let p5 = get_edge_point(bl_pt, bl_val, Side::Left);
+        let p6 = get_edge_point(tl_pt, tl_val, Side::Top);
         edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
         if is_right {
             edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
@@ -650,17 +660,18 @@ pub(super) fn saddle_33(
 #[allow(clippy::too_many_arguments)]
 pub(super) fn saddle_98(
     edges: &mut Vec<Edge>,
-    tl_pt: &Point, _tr_pt: &Point, _br_pt: &Point, _bl_pt: &Point,
+    tl_pt: &Point, tr_pt: &Point, br_pt: &Point, bl_pt: &Point,
     tl_val: f64, tr_val: f64, br_val: f64, bl_val: f64,
     lower: f64, upper: f64, _smoothing: f64,
     is_top: bool, is_right: bool, is_bottom: bool, is_left: bool,
-    interp: &impl Fn(f64, Side) -> Point,
+    _interp: &impl Fn(f64, Side) -> Point,
+    get_edge_point: &impl Fn(&Point, f64, Side) -> Point,
 ) {
     let average = (tl_val + tr_val + br_val + bl_val) / 4.0;
 
     if average < lower || average >= upper {
-        let p0 = interp(upper, Side::Top);
-        let p1 = interp(upper, Side::Left);
+        let p0 = get_edge_point(tl_pt, tl_val, Side::Top);
+        let p1 = get_edge_point(tl_pt, tl_val, Side::Left);
         edges.push(Edge::new(p0.clone(), p1.clone(), Move::Left));
         if is_left {
             edges.push(Edge::new(p1.clone(), tl_pt.clone(), Move::Up));
@@ -669,10 +680,10 @@ pub(super) fn saddle_98(
             edges.push(Edge::new(tl_pt.clone(), p0.clone(), Move::None));
         }
 
-        let p3 = interp(lower, Side::Right);
-        let p4 = interp(lower, Side::Bottom);
-        let p5 = interp(upper, Side::Bottom);
-        let p6 = interp(upper, Side::Right);
+        let p3 = get_edge_point(tr_pt, tr_val, Side::Right);
+        let p4 = get_edge_point(br_pt, br_val, Side::Bottom);
+        let p5 = get_edge_point(br_pt, br_val, Side::Bottom);
+        let p6 = get_edge_point(tr_pt, tr_val, Side::Right);
         edges.push(Edge::new(p3.clone(), p4.clone(), Move::Down));
         if is_bottom {
             edges.push(Edge::new(p4.clone(), p5.clone(), Move::None));
@@ -682,12 +693,12 @@ pub(super) fn saddle_98(
             edges.push(Edge::new(p6.clone(), p3.clone(), Move::None));
         }
     } else if average >= lower && average < upper {
-        let p0 = interp(upper, Side::Top);
-        let p1 = interp(upper, Side::Right);
-        let p2 = interp(lower, Side::Right);
-        let p3 = interp(lower, Side::Bottom);
-        let p4 = interp(upper, Side::Bottom);
-        let p5 = interp(upper, Side::Left);
+        let p0 = get_edge_point(tl_pt, tl_val, Side::Top);
+        let p1 = get_edge_point(tr_pt, tr_val, Side::Right);
+        let p2 = get_edge_point(tr_pt, tr_val, Side::Right);
+        let p3 = get_edge_point(br_pt, br_val, Side::Bottom);
+        let p4 = get_edge_point(br_pt, br_val, Side::Bottom);
+        let p5 = get_edge_point(bl_pt, bl_val, Side::Left);
         edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
         if is_right {
             edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
@@ -710,17 +721,18 @@ pub(super) fn saddle_98(
 #[allow(clippy::too_many_arguments)]
 pub(super) fn saddle_72(
     edges: &mut Vec<Edge>,
-    tl_pt: &Point, _tr_pt: &Point, _br_pt: &Point, _bl_pt: &Point,
+    tl_pt: &Point, tr_pt: &Point, br_pt: &Point, bl_pt: &Point,
     tl_val: f64, tr_val: f64, br_val: f64, bl_val: f64,
     lower: f64, upper: f64, _smoothing: f64,
     is_top: bool, is_right: bool, is_bottom: bool, is_left: bool,
-    interp: &impl Fn(f64, Side) -> Point,
+    _interp: &impl Fn(f64, Side) -> Point,
+    get_edge_point: &impl Fn(&Point, f64, Side) -> Point,
 ) {
     let average = (tl_val + tr_val + br_val + bl_val) / 4.0;
 
     if average < lower || average >= upper {
-        let p0 = interp(lower, Side::Top);
-        let p1 = interp(lower, Side::Left);
+        let p0 = get_edge_point(tl_pt, tl_val, Side::Top);
+        let p1 = get_edge_point(tl_pt, tl_val, Side::Left);
         edges.push(Edge::new(p0.clone(), p1.clone(), Move::Left));
         if is_left {
             edges.push(Edge::new(p1.clone(), tl_pt.clone(), Move::Up));
@@ -729,10 +741,10 @@ pub(super) fn saddle_72(
             edges.push(Edge::new(tl_pt.clone(), p0.clone(), Move::None));
         }
 
-        let p3 = interp(upper, Side::Right);
-        let p4 = interp(upper, Side::Bottom);
-        let p5 = interp(lower, Side::Bottom);
-        let p6 = interp(lower, Side::Right);
+        let p3 = get_edge_point(tr_pt, tr_val, Side::Right);
+        let p4 = get_edge_point(br_pt, br_val, Side::Bottom);
+        let p5 = get_edge_point(br_pt, br_val, Side::Bottom);
+        let p6 = get_edge_point(tr_pt, tr_val, Side::Right);
         edges.push(Edge::new(p3.clone(), p4.clone(), Move::Down));
         if is_bottom {
             edges.push(Edge::new(p4.clone(), p5.clone(), Move::None));
@@ -742,12 +754,12 @@ pub(super) fn saddle_72(
             edges.push(Edge::new(p6.clone(), p3.clone(), Move::None));
         }
     } else if average >= lower && average < upper {
-        let p0 = interp(lower, Side::Top);
-        let p1 = interp(lower, Side::Right);
-        let p2 = interp(upper, Side::Right);
-        let p3 = interp(upper, Side::Bottom);
-        let p4 = interp(lower, Side::Bottom);
-        let p5 = interp(lower, Side::Left);
+        let p0 = get_edge_point(tl_pt, tl_val, Side::Top);
+        let p1 = get_edge_point(tr_pt, tr_val, Side::Right);
+        let p2 = get_edge_point(tr_pt, tr_val, Side::Right);
+        let p3 = get_edge_point(br_pt, br_val, Side::Bottom);
+        let p4 = get_edge_point(br_pt, br_val, Side::Bottom);
+        let p5 = get_edge_point(bl_pt, bl_val, Side::Left);
         edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
         if is_right {
             edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
@@ -770,19 +782,20 @@ pub(super) fn saddle_72(
 #[allow(clippy::too_many_arguments)]
 pub(super) fn saddle_38(
     edges: &mut Vec<Edge>,
-    _tl_pt: &Point, _tr_pt: &Point, br_pt: &Point, _bl_pt: &Point,
+    tl_pt: &Point, tr_pt: &Point, br_pt: &Point, bl_pt: &Point,
     tl_val: f64, tr_val: f64, br_val: f64, bl_val: f64,
     lower: f64, upper: f64, _smoothing: f64,
     is_top: bool, is_right: bool, is_bottom: bool, is_left: bool,
-    interp: &impl Fn(f64, Side) -> Point,
+    _interp: &impl Fn(f64, Side) -> Point,
+    get_edge_point: &impl Fn(&Point, f64, Side) -> Point,
 ) {
     let average = (tl_val + tr_val + br_val + bl_val) / 4.0;
 
     if average < lower || average >= upper {
-        let p0 = interp(upper, Side::Top);
-        let p1 = interp(upper, Side::Left);
-        let p2 = interp(lower, Side::Left);
-        let p3 = interp(lower, Side::Top);
+        let p0 = get_edge_point(tl_pt, tl_val, Side::Top);
+        let p1 = get_edge_point(tl_pt, tl_val, Side::Left);
+        let p2 = get_edge_point(tl_pt, tl_val, Side::Left);
+        let p3 = get_edge_point(tl_pt, tl_val, Side::Top);
         edges.push(Edge::new(p0.clone(), p1.clone(), Move::Left));
         if is_left {
             edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
@@ -792,8 +805,8 @@ pub(super) fn saddle_38(
             edges.push(Edge::new(p3.clone(), p0.clone(), Move::None));
         }
 
-        let p4 = interp(upper, Side::Bottom);
-        let p5 = interp(upper, Side::Right);
+        let p4 = get_edge_point(br_pt, br_val, Side::Bottom);
+        let p5 = get_edge_point(br_pt, br_val, Side::Right);
         edges.push(Edge::new(p4.clone(), p5.clone(), Move::Right));
         if is_right {
             edges.push(Edge::new(p5.clone(), br_pt.clone(), Move::Down));
@@ -802,12 +815,12 @@ pub(super) fn saddle_38(
             edges.push(Edge::new(br_pt.clone(), p4.clone(), Move::None));
         }
     } else if average >= lower && average < upper {
-        let p0 = interp(upper, Side::Top);
-        let p1 = interp(upper, Side::Right);
-        let p3 = interp(upper, Side::Bottom);
-        let p4 = interp(upper, Side::Left);
-        let p5 = interp(lower, Side::Left);
-        let p6 = interp(lower, Side::Top);
+        let p0 = get_edge_point(tl_pt, tl_val, Side::Top);
+        let p1 = get_edge_point(tr_pt, tr_val, Side::Right);
+        let p3 = get_edge_point(br_pt, br_val, Side::Bottom);
+        let p4 = get_edge_point(bl_pt, bl_val, Side::Left);
+        let p5 = get_edge_point(bl_pt, bl_val, Side::Left);
+        let p6 = get_edge_point(tl_pt, tl_val, Side::Top);
         edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
         if is_right {
             edges.push(Edge::new(p1.clone(), br_pt.clone(), Move::Down));
@@ -830,19 +843,20 @@ pub(super) fn saddle_38(
 #[allow(clippy::too_many_arguments)]
 pub(super) fn saddle_132(
     edges: &mut Vec<Edge>,
-    _tl_pt: &Point, _tr_pt: &Point, br_pt: &Point, _bl_pt: &Point,
+    tl_pt: &Point, tr_pt: &Point, br_pt: &Point, bl_pt: &Point,
     tl_val: f64, tr_val: f64, br_val: f64, bl_val: f64,
     lower: f64, upper: f64, _smoothing: f64,
     is_top: bool, is_right: bool, is_bottom: bool, is_left: bool,
-    interp: &impl Fn(f64, Side) -> Point,
+    _interp: &impl Fn(f64, Side) -> Point,
+    get_edge_point: &impl Fn(&Point, f64, Side) -> Point,
 ) {
     let average = (tl_val + tr_val + br_val + bl_val) / 4.0;
 
     if average < lower || average >= upper {
-        let p0 = interp(lower, Side::Top);
-        let p1 = interp(lower, Side::Left);
-        let p2 = interp(upper, Side::Left);
-        let p3 = interp(upper, Side::Top);
+        let p0 = get_edge_point(tl_pt, tl_val, Side::Top);
+        let p1 = get_edge_point(tl_pt, tl_val, Side::Left);
+        let p2 = get_edge_point(tl_pt, tl_val, Side::Left);
+        let p3 = get_edge_point(tl_pt, tl_val, Side::Top);
         edges.push(Edge::new(p0.clone(), p1.clone(), Move::Left));
         if is_left {
             edges.push(Edge::new(p1.clone(), p2.clone(), Move::None));
@@ -852,8 +866,8 @@ pub(super) fn saddle_132(
             edges.push(Edge::new(p3.clone(), p0.clone(), Move::None));
         }
 
-        let p4 = interp(lower, Side::Bottom);
-        let p5 = interp(lower, Side::Right);
+        let p4 = get_edge_point(br_pt, br_val, Side::Bottom);
+        let p5 = get_edge_point(br_pt, br_val, Side::Right);
         edges.push(Edge::new(p4.clone(), p5.clone(), Move::Right));
         if is_right {
             edges.push(Edge::new(p5.clone(), br_pt.clone(), Move::Down));
@@ -862,12 +876,12 @@ pub(super) fn saddle_132(
             edges.push(Edge::new(br_pt.clone(), p4.clone(), Move::None));
         }
     } else if average >= lower && average < upper {
-        let p0 = interp(lower, Side::Top);
-        let p1 = interp(lower, Side::Right);
-        let p3 = interp(lower, Side::Bottom);
-        let p4 = interp(lower, Side::Left);
-        let p5 = interp(upper, Side::Left);
-        let p6 = interp(upper, Side::Top);
+        let p0 = get_edge_point(tl_pt, tl_val, Side::Top);
+        let p1 = get_edge_point(tr_pt, tr_val, Side::Right);
+        let p3 = get_edge_point(br_pt, br_val, Side::Bottom);
+        let p4 = get_edge_point(bl_pt, bl_val, Side::Left);
+        let p5 = get_edge_point(bl_pt, bl_val, Side::Left);
+        let p6 = get_edge_point(tl_pt, tl_val, Side::Top);
         edges.push(Edge::new(p0.clone(), p1.clone(), Move::Right));
         if is_right {
             edges.push(Edge::new(p1.clone(), br_pt.clone(), Move::Down));

@@ -6,16 +6,17 @@ use crate::types::{Edge, Move, Point, Side};
 #[allow(clippy::too_many_arguments)]
 pub(super) fn square_85(
     edges: &mut Vec<Edge>,
-    _tl_pt: &Point, _tr_pt: &Point, _br_pt: &Point, _bl_pt: &Point,
-    _tl_val: f64, _tr_val: f64, _br_val: f64, _bl_val: f64,
+    tl_pt: &Point, tr_pt: &Point, br_pt: &Point, bl_pt: &Point,
+    tl_val: f64, tr_val: f64, br_val: f64, bl_val: f64,
     lower: f64, upper: f64, _smoothing: f64,
     is_top: bool, is_right: bool, is_bottom: bool, is_left: bool,
-    interp: &impl Fn(f64, Side) -> Point,
+    _interp: &impl Fn(f64, Side) -> Point,
+    get_edge_point: &impl Fn(&Point, f64, Side) -> Point,
 ) {
-    let p0 = interp(upper, Side::Right);
-    let p1 = interp(upper, Side::Bottom);
-    let p2 = interp(upper, Side::Left);
-    let p3 = interp(upper, Side::Top);
+    let p0 = get_edge_point(tr_pt, tr_val, Side::Right);
+    let p1 = get_edge_point(br_pt, br_val, Side::Bottom);
+    let p2 = get_edge_point(bl_pt, bl_val, Side::Left);
+    let p3 = get_edge_point(tl_pt, tl_val, Side::Top);
 
     if is_right {
         edges.push(Edge::new(p0.clone(), p1.clone(), Move::Down));

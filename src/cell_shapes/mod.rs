@@ -116,6 +116,18 @@ impl CellShape {
             }
         };
 
+        // CRITICAL FIX: Get edge point - use actual corner when in band, interpolate when outside
+        // This matches Java's getPoints() logic (Shape.java lines 229-236)
+        let get_edge_point = |corner_pt: &Point, corner_val: f64, side: Side| -> Point {
+            if corner_val >= upper {
+                interp(upper, side)  // Interpolate at upper threshold
+            } else if corner_val < lower {
+                interp(lower, side)  // Interpolate at lower threshold
+            } else {
+                corner_pt.clone()    // Use actual corner coordinate
+            }
+        };
+
         // Generate the 8 candidate points (matching Java logic exactly)
         // These represent potential edge crossing points in clockwise order starting from top-right
         let mut eight_points: Vec<Option<Point>> = vec![
@@ -230,23 +242,23 @@ impl CellShape {
             70 | 100 => hexagon_70(&mut edges, &points, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge),
 
             // Saddle cases (14 total) - these are complex with average calculations
-            153 => saddle_153(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp),
-            102 => saddle_102(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp),
-            68 => saddle_68(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp),
-            17 => saddle_17(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp),
-            136 => saddle_136(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp),
-            34 => saddle_34(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp),
-            152 => saddle_152(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp),
-            18 => saddle_18(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp),
-            137 => saddle_137(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp),
-            33 => saddle_33(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp),
-            98 => saddle_98(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp),
-            72 => saddle_72(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp),
-            38 => saddle_38(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp),
-            132 => saddle_132(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp),
+            153 => saddle_153(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp, &get_edge_point),
+            102 => saddle_102(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp, &get_edge_point),
+            68 => saddle_68(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp, &get_edge_point),
+            17 => saddle_17(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp, &get_edge_point),
+            136 => saddle_136(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp, &get_edge_point),
+            34 => saddle_34(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp, &get_edge_point),
+            152 => saddle_152(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp, &get_edge_point),
+            18 => saddle_18(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp, &get_edge_point),
+            137 => saddle_137(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp, &get_edge_point),
+            33 => saddle_33(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp, &get_edge_point),
+            98 => saddle_98(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp, &get_edge_point),
+            72 => saddle_72(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp, &get_edge_point),
+            38 => saddle_38(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp, &get_edge_point),
+            132 => saddle_132(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp, &get_edge_point),
 
             // Square case (1 total)
-            85 => square_85(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp),
+            85 => square_85(&mut edges, &tl_pt, &tr_pt, &br_pt, &bl_pt, tl_val, tr_val, br_val, bl_val, lower, upper, smoothing, is_top_edge, is_right_edge, is_bottom_edge, is_left_edge, &interp, &get_edge_point),
 
             _ => return None,
         }
