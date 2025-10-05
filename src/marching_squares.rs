@@ -700,6 +700,12 @@ pub fn generate_isobands_phase2(grid: &GeoGrid, lower: f64, upper: f64) -> Resul
             // Calculate cell configuration
             let config = calculate_cell_config(tl, tr, br, bl, lower, upper);
 
+            // Debug ALL cells around (282,1797) - even empty ones
+            if row >= 275 && row <= 290 && col >= 1790 && col <= 1797 {
+                eprintln!("🎯 DEBUG CELL ({},{}) config={} tl={:.2} tr={:.2} br={:.2} bl={:.2}",
+                    row, col, config, tl.value, tr.value, br.value, bl.value);
+            }
+
             // Create cell shape
             let is_top = row == 0;
             let is_right = col + 1 == cols - 1;
@@ -733,12 +739,11 @@ pub fn generate_isobands_phase2(grid: &GeoGrid, lower: f64, upper: f64) -> Resul
                     }
                 }
 
-                // Debug cells around (282,1797) - the problem area
+                // Debug cells with edges in the problem area
                 if row >= 275 && row <= 290 && col >= 1790 && col <= 1797 {
-                    eprintln!("🎯 DEBUG CELL ({},{}) config={} tl={:.2} tr={:.2} br={:.2} bl={:.2} edges={}",
-                        row, col, config, tl.value, tr.value, br.value, bl.value, shape.edges.len());
+                    eprintln!("   ✓ HAS EDGES: {} edges", shape.edges.len());
                     for (start, edge) in &shape.edges {
-                        eprintln!("   Edge: ({:.3},{:.3}) -> ({:.3},{:.3}) move={:?}",
+                        eprintln!("      Edge: ({:.3},{:.3}) -> ({:.3},{:.3}) move={:?}",
                             start.x, start.y, edge.end.x, edge.end.y, edge.move_dir);
                     }
                 }
@@ -746,6 +751,10 @@ pub fn generate_isobands_phase2(grid: &GeoGrid, lower: f64, upper: f64) -> Resul
                 let corners = (tl.value as f64, tr.value as f64, br.value as f64, bl.value as f64);
                 cell_row.push(Some(CellWithEdges::new_with_config(shape, config, corners)));
             } else {
+                // Debug empty cells in the problem area
+                if row >= 275 && row <= 290 && col >= 1790 && col <= 1797 {
+                    eprintln!("   ✗ NO EDGES (config {} skipped or produced no shape)", config);
+                }
                 cell_row.push(None);
             }
         }
