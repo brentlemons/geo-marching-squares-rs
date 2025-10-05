@@ -21,6 +21,8 @@ pub struct CellWithEdges {
     pub config: u8,
     /// Corner values: (tl, tr, br, bl)
     pub corners: (f64, f64, f64, f64),
+    /// Boundary flags: (is_top, is_right, is_bottom, is_left)
+    pub boundaries: (bool, bool, bool, bool),
 }
 
 impl CellWithEdges {
@@ -34,11 +36,12 @@ impl CellWithEdges {
             total_edge_count: total_edges,
             config: 0,
             corners: (0.0, 0.0, 0.0, 0.0),
+            boundaries: (false, false, false, false),
         }
     }
 
     /// Create a new cell with edges and configuration info
-    pub fn new_with_config(shape: CellShape, config: u8, corners: (f64, f64, f64, f64)) -> Self {
+    pub fn new_with_config(shape: CellShape, config: u8, corners: (f64, f64, f64, f64), boundaries: (bool, bool, bool, bool)) -> Self {
         let total_edges = shape.edges.len();
         Self {
             shape,
@@ -47,6 +50,7 @@ impl CellWithEdges {
             total_edge_count: total_edges,
             config,
             corners,
+            boundaries,
         }
     }
 
@@ -203,12 +207,13 @@ pub fn trace_ring(
 
         if tmp_edges.is_empty() {
             let (tl, tr, br, bl) = cell.corners;
+            let (is_top, is_right, is_bottom, is_left) = cell.boundaries;
             if let Some(ref edge) = current_edge {
-                eprintln!("⚠️ trace_ring at ({},{}) STOPPED: No edges at ({},{}) from point ({:.6},{:.6}), config={}, corners=[{:.2},{:.2},{:.2},{:.2}], {} edges collected",
-                    start_row, start_col, current_row, current_col, edge.end.x, edge.end.y, cell.config, tl, tr, br, bl, all_edges.len());
+                eprintln!("⚠️ trace_ring at ({},{}) STOPPED: No edges at ({},{}) from point ({:.6},{:.6}), config={}, corners=[{:.2},{:.2},{:.2},{:.2}], boundaries=[T:{},R:{},B:{},L:{}], {} edges collected",
+                    start_row, start_col, current_row, current_col, edge.end.x, edge.end.y, cell.config, tl, tr, br, bl, is_top, is_right, is_bottom, is_left, all_edges.len());
             } else {
-                eprintln!("⚠️ trace_ring at ({},{}) STOPPED: No edges at ({},{}), config={}, corners=[{:.2},{:.2},{:.2},{:.2}], {} edges collected",
-                    start_row, start_col, current_row, current_col, cell.config, tl, tr, br, bl, all_edges.len());
+                eprintln!("⚠️ trace_ring at ({},{}) STOPPED: No edges at ({},{}), config={}, corners=[{:.2},{:.2},{:.2},{:.2}], boundaries=[T:{},R:{},B:{},L:{}], {} edges collected",
+                    start_row, start_col, current_row, current_col, cell.config, tl, tr, br, bl, is_top, is_right, is_bottom, is_left, all_edges.len());
             }
             break;
         }

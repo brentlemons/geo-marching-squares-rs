@@ -749,7 +749,8 @@ pub fn generate_isobands_phase2(grid: &GeoGrid, lower: f64, upper: f64) -> Resul
                 }
 
                 let corners = (tl.value as f64, tr.value as f64, br.value as f64, bl.value as f64);
-                cell_row.push(Some(CellWithEdges::new_with_config(shape, config, corners)));
+                let boundaries = (is_top, is_right, is_bottom, is_left);
+                cell_row.push(Some(CellWithEdges::new_with_config(shape, config, corners, boundaries)));
             } else {
                 // Debug empty cells in the problem area
                 if row >= 275 && row <= 290 && col >= 1790 && col <= 1797 {
