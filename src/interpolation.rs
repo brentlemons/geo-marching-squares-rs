@@ -70,8 +70,15 @@ pub fn interpolate_point(
     let new_mu = 0.5 + center_diff;
 
     // Linear interpolation with adjusted mu
-    let x = (1.0 - new_mu) * point0.x + new_mu * point1.x;
-    let y = (1.0 - new_mu) * point0.y + new_mu * point1.y;
+    // Java: Shape.java:492-511 - interpolate using actual corner coordinates
+    let x = match (point0.x, point1.x) {
+        (Some(x0), Some(x1)) => (1.0 - new_mu) * x0 + new_mu * x1,
+        _ => return Point::placeholder(0.0, 0.0, Side::Top), // Invalid - shouldn't happen
+    };
+    let y = match (point0.y, point1.y) {
+        (Some(y0), Some(y1)) => (1.0 - new_mu) * y0 + new_mu * y1,
+        _ => return Point::placeholder(0.0, 0.0, Side::Top), // Invalid - shouldn't happen
+    };
 
     // CRITICAL: Return UNROUNDED coordinates to match Java's behavior
     // Java keeps coordinates unrounded during interpolation and edge tracing,
@@ -192,10 +199,15 @@ pub fn interpolate_point_great_circle(
     let new_mu = 0.5 + center_diff;
 
     // Convert to radians for spherical interpolation
-    let lon0 = point0.x.to_radians();
-    let lat0 = point0.y.to_radians();
-    let lon1 = point1.x.to_radians();
-    let lat1 = point1.y.to_radians();
+    let (lon0, lat0, lon1, lat1) = match (point0.x, point0.y, point1.x, point1.y) {
+        (Some(x0), Some(y0), Some(x1), Some(y1)) => (
+            x0.to_radians(),
+            y0.to_radians(),
+            x1.to_radians(),
+            y1.to_radians(),
+        ),
+        _ => return Point::placeholder(0.0, 0.0, Side::Top), // Invalid
+    };
 
     // Calculate great circle distance
     let d = (lat0.sin() * lat1.sin() +
@@ -204,8 +216,14 @@ pub fn interpolate_point_great_circle(
     // Handle degenerate case where points are same or antipodal
     if d.abs() < 1e-10 || (d - PI).abs() < 1e-10 {
         // Points are too close or antipodal - fall back to linear interpolation
-        let x = (1.0 - new_mu) * point0.x + new_mu * point1.x;
-        let y = (1.0 - new_mu) * point0.y + new_mu * point1.y;
+        let (x0, y0, x1, y1) = (
+            point0.x.unwrap(),
+            point0.y.unwrap(),
+            point1.x.unwrap(),
+            point1.y.unwrap(),
+        );
+        let x = (1.0 - new_mu) * x0 + new_mu * x1;
+        let y = (1.0 - new_mu) * y0 + new_mu * y1;
         return Point::from_lon_lat(x, y);
     }
 
@@ -239,8 +257,8 @@ mod tests {
         let result = interpolate_point(15.0, 10.0, 20.0, &p0, &p1, 0.999);
 
         // With center bias, should be very close to midpoint
-        assert!((result.x - (-99.5)).abs() < 0.01);
-        assert!((result.y - 40.5).abs() < 0.01);
+        assert!((result.x.unwrap() - (-99.5)).abs() < 0.01);
+        assert!((result.y.unwrap() - 40.5).abs() < 0.01);
     }
 
     #[test]
@@ -250,13 +268,13 @@ mod tests {
 
         // At the lower endpoint
         let result = interpolate_point(10.0, 10.0, 20.0, &p0, &p1, 0.999);
-        assert!((result.x - p0.x).abs() < 0.5);
-        assert!((result.y - p0.y).abs() < 0.5);
+        assert!((result.x.unwrap() - p0.x.unwrap()).abs() < 0.5);
+        assert!((result.y.unwrap() - p0.y.unwrap()).abs() < 0.5);
 
         // At the upper endpoint
         let result = interpolate_point(20.0, 10.0, 20.0, &p0, &p1, 0.999);
-        assert!((result.x - p1.x).abs() < 0.5);
-        assert!((result.y - p1.y).abs() < 0.5);
+        assert!((result.x.unwrap() - p1.x.unwrap()).abs() < 0.5);
+        assert!((result.y.unwrap() - p1.y.unwrap()).abs() < 0.5);
     }
 
     #[test]
@@ -278,8 +296,8 @@ mod tests {
         );
 
         // Should be on the top edge (y = 41.0) between tl and tr
-        assert!((result.y - 41.0).abs() < 0.01);
-        assert!(result.x > -100.0 && result.x < -99.0);
+        assert!((result.y.unwrap() - 41.0).abs() < 0.01);
+        assert!(result.x.unwrap() > -100.0 && result.x.unwrap() < -99.0);
     }
 
     #[test]
@@ -291,8 +309,8 @@ mod tests {
         let result = interpolate_point_great_circle(15.0, 10.0, 20.0, &p0, &p1, 0.999);
 
         // Should be close to midpoint (great circle and linear are similar for small distances)
-        assert!((result.x - (-99.5)).abs() < 0.1);
-        assert!((result.y - 40.0).abs() < 0.1);
+        assert!((result.x.unwrap() - (-99.5)).abs() < 0.1);
+        assert!((result.y.unwrap() - 40.0).abs() < 0.1);
     }
 
     #[test]
@@ -307,8 +325,8 @@ mod tests {
 
         // Should match direct cosine interpolation
         let direct = interpolate_point(15.0, 10.0, 20.0, &p0, &p1, 0.999);
-        assert!((result.x - direct.x).abs() < 1e-10);
-        assert!((result.y - direct.y).abs() < 1e-10);
+        assert!((result.x.unwrap() - direct.x.unwrap()).abs() < 1e-10);
+        assert!((result.y.unwrap() - direct.y.unwrap()).abs() < 1e-10);
     }
 
     #[test]
@@ -323,8 +341,8 @@ mod tests {
 
         // Should match direct great circle interpolation
         let direct = interpolate_point_great_circle(15.0, 10.0, 20.0, &p0, &p1, 0.999);
-        assert!((result.x - direct.x).abs() < 1e-10);
-        assert!((result.y - direct.y).abs() < 1e-10);
+        assert!((result.x.unwrap() - direct.x.unwrap()).abs() < 1e-10);
+        assert!((result.y.unwrap() - direct.y.unwrap()).abs() < 1e-10);
     }
 
     #[test]
@@ -337,8 +355,8 @@ mod tests {
         let gc_result = interpolate_point_great_circle(15.0, 10.0, 20.0, &p0, &p1, 0.999);
 
         // Difference should be less than 1 meter for small distances
-        let diff_x = (cosine_result.x - gc_result.x).abs();
-        let diff_y = (cosine_result.y - gc_result.y).abs();
+        let diff_x = (cosine_result.x.unwrap() - gc_result.x.unwrap()).abs();
+        let diff_y = (cosine_result.y.unwrap() - gc_result.y.unwrap()).abs();
 
         assert!(diff_x < 0.0001); // Less than ~10m
         assert!(diff_y < 0.0001);

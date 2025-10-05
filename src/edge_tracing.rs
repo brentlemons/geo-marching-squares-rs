@@ -117,18 +117,16 @@ impl CellWithEdges {
     }
 }
 
-/// Compare two points for equality with epsilon tolerance
+/// Compare two points for equality using exact bitwise comparison
 ///
-/// CRITICAL: Floating point interpolation in adjacent cells does NOT produce
-/// bitwise identical coordinates. We need epsilon comparison to detect when
-/// edge endpoints from different cells represent the same geographic location.
+/// Java: Uses Point.equals() which compares all fields exactly
+/// This matches Java's behavior where Points must match exactly for HashMap lookups
 ///
-/// Using 1e-6 tolerance (~10cm at equator) to match coordinates that should
-/// be identical but have minor floating point differences. This is far more
-/// than sufficient for 3km grid resolution weather data.
+/// IMPORTANT: Java achieves exact matches because adjacent cells use the SAME
+/// corner Point objects, and interpolation uses the same f64 values from those Points.
+/// The arithmetic produces bitwise identical results.
 fn points_equal(p1: &Point, p2: &Point) -> bool {
-    const EPSILON: f64 = 1e-6;
-    (p1.x - p2.x).abs() < EPSILON && (p1.y - p2.y).abs() < EPSILON
+    p1 == p2
 }
 
 /// Trace a single polygon ring starting from a cell
@@ -209,7 +207,7 @@ pub fn trace_ring(
             let (tl, tr, br, bl) = cell.corners;
             let (is_top, is_right, is_bottom, is_left) = cell.boundaries;
             if let Some(ref edge) = current_edge {
-                eprintln!("⚠️ trace_ring at ({},{}) STOPPED: No edges at ({},{}) from point ({:.6},{:.6}), config={}, corners=[{:.2},{:.2},{:.2},{:.2}], boundaries=[T:{},R:{},B:{},L:{}], {} edges collected",
+                eprintln!("⚠️ trace_ring at ({},{}) STOPPED: No edges at ({},{}) from point ({:?},{:?}), config={}, corners=[{:.2},{:.2},{:.2},{:.2}], boundaries=[T:{},R:{},B:{},L:{}], {} edges collected",
                     start_row, start_col, current_row, current_col, edge.end.x, edge.end.y, cell.config, tl, tr, br, bl, is_top, is_right, is_bottom, is_left, all_edges.len());
             } else {
                 eprintln!("⚠️ trace_ring at ({},{}) STOPPED: No edges at ({},{}), config={}, corners=[{:.2},{:.2},{:.2},{:.2}], boundaries=[T:{},R:{},B:{},L:{}], {} edges collected",
@@ -225,10 +223,12 @@ pub fn trace_ring(
             // Java: for (Edge edge : tmpEdges) { ... }
             for edge in &tmp_edges {
                 // Debug: Check for unusually long edges (possible tracing bug)
-                let edge_length_deg = ((edge.end.x - edge.start.x).powi(2) + (edge.end.y - edge.start.y).powi(2)).sqrt();
-                if edge_length_deg > 10.0 {  // ~1000km at mid-latitudes
-                    eprintln!("🚨 LONG EDGE DETECTED: ({},{}) edge from ({:.6},{:.6}) to ({:.6},{:.6}), length={:.2}°, move={:?}",
-                        current_row, current_col, edge.start.x, edge.start.y, edge.end.x, edge.end.y, edge_length_deg, edge.move_dir);
+                if let (Some(sx), Some(sy), Some(ex), Some(ey)) = (edge.start.x, edge.start.y, edge.end.x, edge.end.y) {
+                    let edge_length_deg = ((ex - sx).powi(2) + (ey - sy).powi(2)).sqrt();
+                    if edge_length_deg > 10.0 {  // ~1000km at mid-latitudes
+                        eprintln!("🚨 LONG EDGE DETECTED: ({},{}) edge from ({:.6},{:.6}) to ({:.6},{:.6}), length={:.2}°, move={:?}",
+                            current_row, current_col, sx, sy, ex, ey, edge_length_deg, edge.move_dir);
+                    }
                 }
 
                 // Java: cells[y][x].removeEdge(edge.getStart());
@@ -294,25 +294,26 @@ pub fn trace_ring(
     }
 
     // CRITICAL FIX: Ensure ring is closed
-    // If the ring didn't close perfectly during tracing (due to floating point differences),
-    // explicitly close it by replacing the last point with the first
+    // Java: Ring closes when edge.end == all_edges[0].start
+    // With bitwise equality this should work exactly
     if points.len() >= 2 {
-        const EPSILON: f64 = 1.0; // 1 degree - if they're within this, they SHOULD be the same point
         let first = points[0].clone();
         let last_idx = points.len() - 1;
         let last = points[last_idx].clone();
 
-        let dx = first.x - last.x;
-        let dy = first.y - last.y;
-        let dist = (dx * dx + dy * dy).sqrt();
+        if first != last {
+            if let (Some(fx), Some(fy), Some(lx), Some(ly)) = (first.x, first.y, last.x, last.y) {
+                let dx = fx - lx;
+                let dy = fy - ly;
+                let dist = (dx * dx + dy * dy).sqrt();
 
-        if dist > EPSILON {
-            // Ring is NOT closed and they're too far apart - this is a real error
-            eprintln!("⚠️ WARNING: Ring at ({},{}) failed to close! first=({:.6},{:.6}) last=({:.6},{:.6}) dist={:.6}°",
-                start_row, start_col, first.x, first.y, last.x, last.y, dist);
-        } else if dist > 1e-10 {
-            // Ring should be closed but has small gap - fix it
-            points[last_idx] = first;
+                const EPSILON: f64 = 1.0; // 1 degree - for warning only
+                if dist > EPSILON {
+                    // Ring is NOT closed and they're too far apart - this is a real error
+                    eprintln!("⚠️ WARNING: Ring at ({},{}) failed to close! first=({:.6},{:.6}) last=({:.6},{:.6}) dist={:.6}°",
+                        start_row, start_col, fx, fy, lx, ly, dist);
+                }
+            }
         }
     }
 
@@ -320,14 +321,12 @@ pub fn trace_ring(
     for i in 0..points.len().saturating_sub(1) {
         let p1 = &points[i];
         let p2 = &points[i + 1];
-        let seg_length = ((p2.x - p1.x).powi(2) + (p2.y - p1.y).powi(2)).sqrt();
-        if seg_length > 10.0 {
-            eprintln!("🚨 LONG SEGMENT IN RING: segment {} from ({:.6},{:.6}) to ({:.6},{:.6}), length={:.2}°",
-                i, p1.x, p1.y, p2.x, p2.y, seg_length);
-            eprintln!("   Ring has {} total points, {} edges traced", points.len(), all_edges.len());
-            if i > 0 {
-                let prev = &points[i - 1];
-                eprintln!("   Previous point: ({:.6},{:.6})", prev.x, prev.y);
+        if let (Some(x1), Some(y1), Some(x2), Some(y2)) = (p1.x, p1.y, p2.x, p2.y) {
+            let seg_length = ((x2 - x1).powi(2) + (y2 - y1).powi(2)).sqrt();
+            if seg_length > 10.0 {
+                eprintln!("🚨 LONG SEGMENT IN RING: segment {} from ({:.6},{:.6}) to ({:.6},{:.6}), length={:.2}°",
+                    i, x1, y1, x2, y2, seg_length);
+                eprintln!("   Ring has {} total points, {} edges traced", points.len(), all_edges.len());
             }
         }
     }

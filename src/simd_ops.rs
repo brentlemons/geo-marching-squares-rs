@@ -132,7 +132,7 @@ mod tests {
 
         // All should interpolate to approximately midpoint
         for result in &results {
-            assert!(result.x > -100.0 && result.x < -99.0);
+            assert!(result.x.unwrap() > -100.0 && result.x.unwrap() < -99.0);
         }
     }
 

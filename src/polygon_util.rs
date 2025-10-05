@@ -8,6 +8,10 @@ use crate::types::Point;
 ///
 /// Based on: http://www.ecse.rpi.edu/Homepages/wrf/Research/Short_Notes/pnpoly.html
 pub fn point_in_polygon(point: &Point, polygon: &[Point]) -> bool {
+    // Unwrap coordinates - all actual points should have Some(x) and Some(y)
+    let point_x = point.x.unwrap_or(0.0);
+    let point_y = point.y.unwrap_or(0.0);
+
     let mut inside = false;
     let n = polygon.len();
 
@@ -16,8 +20,13 @@ pub fn point_in_polygon(point: &Point, polygon: &[Point]) -> bool {
         let pi = &polygon[i];
         let pj = &polygon[j];
 
-        if ((pi.y > point.y) != (pj.y > point.y))
-            && (point.x < (pj.x - pi.x) * (point.y - pi.y) / (pj.y - pi.y) + pi.x)
+        let pi_x = pi.x.unwrap_or(0.0);
+        let pi_y = pi.y.unwrap_or(0.0);
+        let pj_x = pj.x.unwrap_or(0.0);
+        let pj_y = pj.y.unwrap_or(0.0);
+
+        if ((pi_y > point_y) != (pj_y > point_y))
+            && (point_x < (pj_x - pi_x) * (point_y - pi_y) / (pj_y - pi_y) + pi_x)
         {
             inside = !inside;
         }
@@ -52,10 +61,12 @@ pub fn organize_polygons(mut rings: Vec<Vec<Point>>) -> Vec<(Vec<Point>, Vec<Vec
         for i in 0..ring.len().saturating_sub(1) {
             let p1 = &ring[i];
             let p2 = &ring[i + 1];
-            let seg_len = ((p2.x - p1.x).powi(2) + (p2.y - p1.y).powi(2)).sqrt();
-            if seg_len > 10.0 {
-                eprintln!("🚨 LONG SEGMENT IN INPUT RING {}: segment {} from ({:.6},{:.6}) to ({:.6},{:.6}), length={:.2}°",
-                    idx, i, p1.x, p1.y, p2.x, p2.y, seg_len);
+            if let (Some(x1), Some(y1), Some(x2), Some(y2)) = (p1.x, p1.y, p2.x, p2.y) {
+                let seg_len = ((x2 - x1).powi(2) + (y2 - y1).powi(2)).sqrt();
+                if seg_len > 10.0 {
+                    eprintln!("🚨 LONG SEGMENT IN INPUT RING {}: segment {} from ({:.6},{:.6}) to ({:.6},{:.6}), length={:.2}°",
+                        idx, i, x1, y1, x2, y2, seg_len);
+                }
             }
         }
     }
@@ -130,10 +141,12 @@ pub fn organize_polygons(mut rings: Vec<Vec<Point>>) -> Vec<(Vec<Point>, Vec<Vec
         for i in 0..exterior.len().saturating_sub(1) {
             let p1 = &exterior[i];
             let p2 = &exterior[i + 1];
-            let seg_len = ((p2.x - p1.x).powi(2) + (p2.y - p1.y).powi(2)).sqrt();
-            if seg_len > 10.0 {
-                eprintln!("🚨 LONG SEGMENT IN OUTPUT POLYGON {} EXTERIOR: segment {} from ({:.6},{:.6}) to ({:.6},{:.6}), length={:.2}°",
-                    poly_idx, i, p1.x, p1.y, p2.x, p2.y, seg_len);
+            if let (Some(x1), Some(y1), Some(x2), Some(y2)) = (p1.x, p1.y, p2.x, p2.y) {
+                let seg_len = ((x2 - x1).powi(2) + (y2 - y1).powi(2)).sqrt();
+                if seg_len > 10.0 {
+                    eprintln!("🚨 LONG SEGMENT IN OUTPUT POLYGON {} EXTERIOR: segment {} from ({:.6},{:.6}) to ({:.6},{:.6}), length={:.2}°",
+                        poly_idx, i, x1, y1, x2, y2, seg_len);
+                }
             }
         }
         // Check hole rings
@@ -141,10 +154,12 @@ pub fn organize_polygons(mut rings: Vec<Vec<Point>>) -> Vec<(Vec<Point>, Vec<Vec
             for i in 0..hole.len().saturating_sub(1) {
                 let p1 = &hole[i];
                 let p2 = &hole[i + 1];
-                let seg_len = ((p2.x - p1.x).powi(2) + (p2.y - p1.y).powi(2)).sqrt();
-                if seg_len > 10.0 {
-                    eprintln!("🚨 LONG SEGMENT IN OUTPUT POLYGON {} HOLE {}: segment {} from ({:.6},{:.6}) to ({:.6},{:.6}), length={:.2}°",
-                        poly_idx, hole_idx, i, p1.x, p1.y, p2.x, p2.y, seg_len);
+                if let (Some(x1), Some(y1), Some(x2), Some(y2)) = (p1.x, p1.y, p2.x, p2.y) {
+                    let seg_len = ((x2 - x1).powi(2) + (y2 - y1).powi(2)).sqrt();
+                    if seg_len > 10.0 {
+                        eprintln!("🚨 LONG SEGMENT IN OUTPUT POLYGON {} HOLE {}: segment {} from ({:.6},{:.6}) to ({:.6},{:.6}), length={:.2}°",
+                            poly_idx, hole_idx, i, x1, y1, x2, y2, seg_len);
+                    }
                 }
             }
         }
@@ -365,8 +380,8 @@ mod tests {
         let area_a = 1.0 * 1.0;   // 1
 
         // Simple area calculation for the exterior
-        let ext_area = (exterior_with_hole[2].x - exterior_with_hole[0].x)
-            * (exterior_with_hole[2].y - exterior_with_hole[0].y);
+        let ext_area = (exterior_with_hole[2].x.unwrap() - exterior_with_hole[0].x.unwrap())
+            * (exterior_with_hole[2].y.unwrap() - exterior_with_hole[0].y.unwrap());
 
         assert!(
             (ext_area - area_b).abs() < 1.0,
@@ -375,7 +390,7 @@ mod tests {
         );
 
         // The hole should be medium C (area ~100)
-        let hole_area = (holes[0][2].x - holes[0][0].x) * (holes[0][2].y - holes[0][0].y);
+        let hole_area = (holes[0][2].x.unwrap() - holes[0][0].x.unwrap()) * (holes[0][2].y.unwrap() - holes[0][0].y.unwrap());
         assert!(
             (hole_area - area_c).abs() < 1.0,
             "Hole should be medium C (area ~100), got area {}",
@@ -387,7 +402,7 @@ mod tests {
         assert_eq!(separate_holes.len(), 0, "Tiny A should have no holes");
 
         let sep_area =
-            (separate_exterior[2].x - separate_exterior[0].x) * (separate_exterior[2].y - separate_exterior[0].y);
+            (separate_exterior[2].x.unwrap() - separate_exterior[0].x.unwrap()) * (separate_exterior[2].y.unwrap() - separate_exterior[0].y.unwrap());
         assert!(
             (sep_area - area_a).abs() < 0.1,
             "Separate polygon should be tiny A (area ~1), got area {}",
@@ -436,8 +451,8 @@ mod tests {
         assert_eq!(organized[0].1.len(), 2, "Should have 2 holes");
 
         // Verify the exterior is the large C
-        let ext_area = (organized[0].0[2].x - organized[0].0[0].x)
-            * (organized[0].0[2].y - organized[0].0[0].y);
+        let ext_area = (organized[0].0[2].x.unwrap() - organized[0].0[0].x.unwrap())
+            * (organized[0].0[2].y.unwrap() - organized[0].0[0].y.unwrap());
         assert!(
             (ext_area - 100.0).abs() < 1.0,
             "Exterior should be large C (area 100)"
@@ -445,7 +460,7 @@ mod tests {
 
         // Verify both holes are present (areas should be 1.0 each)
         for hole in &organized[0].1 {
-            let hole_area = (hole[2].x - hole[0].x) * (hole[2].y - hole[0].y);
+            let hole_area = (hole[2].x.unwrap() - hole[0].x.unwrap()) * (hole[2].y.unwrap() - hole[0].y.unwrap());
             assert!(
                 (hole_area - 1.0).abs() < 0.1,
                 "Each hole should have area ~1.0, got {}",
@@ -489,16 +504,16 @@ mod tests {
         assert_eq!(organized[0].1.len(), 1, "Should have 1 hole");
 
         // Verify outer is the exterior
-        let ext_area = (organized[0].0[2].x - organized[0].0[0].x)
-            * (organized[0].0[2].y - organized[0].0[0].y);
+        let ext_area = (organized[0].0[2].x.unwrap() - organized[0].0[0].x.unwrap())
+            * (organized[0].0[2].y.unwrap() - organized[0].0[0].y.unwrap());
         assert!(
             (ext_area - 400.0).abs() < 1.0,
             "Exterior should be outer (area 400)"
         );
 
         // Verify hole is interior
-        let hole_area = (organized[0].1[0][2].x - organized[0].1[0][0].x)
-            * (organized[0].1[0][2].y - organized[0].1[0][0].y);
+        let hole_area = (organized[0].1[0][2].x.unwrap() - organized[0].1[0][0].x.unwrap())
+            * (organized[0].1[0][2].y.unwrap() - organized[0].1[0][0].y.unwrap());
         assert!(
             (hole_area - 100.0).abs() < 1.0,
             "Hole should have area 100"

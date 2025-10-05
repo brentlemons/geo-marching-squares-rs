@@ -55,8 +55,12 @@ impl CellShape {
         for edge in edges {
             // Filter out edges with NaN or infinite coordinates
             // This matches Java behavior where division by zero creates NaN points
-            if edge.start.x.is_finite() && edge.start.y.is_finite() &&
-               edge.end.x.is_finite() && edge.end.y.is_finite() {
+            // Only check actual points (placeholders will be interpolated later)
+            let start_valid = edge.start.x.map_or(false, |x| x.is_finite()) &&
+                             edge.start.y.map_or(false, |y| y.is_finite());
+            let end_valid = edge.end.x.map_or(false, |x| x.is_finite()) &&
+                           edge.end.y.map_or(false, |y| y.is_finite());
+            if start_valid && end_valid {
                 edge_map.insert(edge.start, edge);
             }
         }
@@ -129,69 +133,114 @@ impl CellShape {
         };
 
         // Generate the 8 candidate points (matching Java logic exactly)
-        // These represent potential edge crossing points in clockwise order starting from top-right
+        // Java: Shape.java:229-236 - Creates placeholder Points for out-of-band corners
+        // CRITICAL: Do NOT interpolate yet! Create placeholders that will be interpolated AFTER deduplication
         let mut eight_points: Vec<Option<Point>> = vec![
             // 0: Top edge at TR corner
             if !is_top_blank() {
-                Some(if tr_val >= upper { interp(upper, Side::Top) }
-                     else if tr_val < lower { interp(lower, Side::Top) }
-                     else { tr_pt.clone() })
+                Some(if tr_val >= upper {
+                    Point::placeholder(tr_val, upper, Side::Top)  // x=null, y=null
+                } else if tr_val < lower {
+                    Point::placeholder(tr_val, lower, Side::Top)  // x=null, y=null
+                } else {
+                    tr_pt.clone()  // Actual corner Point with x,y set
+                })
             } else { None },
             // 1: Right edge at TR corner
             if !is_right_blank() {
-                Some(if tr_val >= upper { interp(upper, Side::Right) }
-                     else if tr_val < lower { interp(lower, Side::Right) }
-                     else { tr_pt.clone() })
+                Some(if tr_val >= upper {
+                    Point::placeholder(tr_val, upper, Side::Right)
+                } else if tr_val < lower {
+                    Point::placeholder(tr_val, lower, Side::Right)
+                } else {
+                    tr_pt.clone()  // SAME object as position 0 if in band!
+                })
             } else { None },
             // 2: Right edge at BR corner
             if !is_right_blank() {
-                Some(if br_val >= upper { interp(upper, Side::Right) }
-                     else if br_val < lower { interp(lower, Side::Right) }
-                     else { br_pt.clone() })
+                Some(if br_val >= upper {
+                    Point::placeholder(br_val, upper, Side::Right)
+                } else if br_val < lower {
+                    Point::placeholder(br_val, lower, Side::Right)
+                } else {
+                    br_pt.clone()
+                })
             } else { None },
             // 3: Bottom edge at BR corner
             if !is_bottom_blank() {
-                Some(if br_val >= upper { interp(upper, Side::Bottom) }
-                     else if br_val < lower { interp(lower, Side::Bottom) }
-                     else { br_pt.clone() })
+                Some(if br_val >= upper {
+                    Point::placeholder(br_val, upper, Side::Bottom)
+                } else if br_val < lower {
+                    Point::placeholder(br_val, lower, Side::Bottom)
+                } else {
+                    br_pt.clone()
+                })
             } else { None },
             // 4: Bottom edge at BL corner
             if !is_bottom_blank() {
-                Some(if bl_val >= upper { interp(upper, Side::Bottom) }
-                     else if bl_val < lower { interp(lower, Side::Bottom) }
-                     else { bl_pt.clone() })
+                Some(if bl_val >= upper {
+                    Point::placeholder(bl_val, upper, Side::Bottom)
+                } else if bl_val < lower {
+                    Point::placeholder(bl_val, lower, Side::Bottom)
+                } else {
+                    bl_pt.clone()
+                })
             } else { None },
             // 5: Left edge at BL corner
             if !is_left_blank() {
-                Some(if bl_val >= upper { interp(upper, Side::Left) }
-                     else if bl_val < lower { interp(lower, Side::Left) }
-                     else { bl_pt.clone() })
+                Some(if bl_val >= upper {
+                    Point::placeholder(bl_val, upper, Side::Left)
+                } else if bl_val < lower {
+                    Point::placeholder(bl_val, lower, Side::Left)
+                } else {
+                    bl_pt.clone()
+                })
             } else { None },
             // 6: Left edge at TL corner
             if !is_left_blank() {
-                Some(if tl_val >= upper { interp(upper, Side::Left) }
-                     else if tl_val < lower { interp(lower, Side::Left) }
-                     else { tl_pt.clone() })
+                Some(if tl_val >= upper {
+                    Point::placeholder(tl_val, upper, Side::Left)
+                } else if tl_val < lower {
+                    Point::placeholder(tl_val, lower, Side::Left)
+                } else {
+                    tl_pt.clone()
+                })
             } else { None },
             // 7: Top edge at TL corner
             if !is_top_blank() {
-                Some(if tl_val >= upper { interp(upper, Side::Top) }
-                     else if tl_val < lower { interp(lower, Side::Top) }
-                     else { tl_pt.clone() })
+                Some(if tl_val >= upper {
+                    Point::placeholder(tl_val, upper, Side::Top)
+                } else if tl_val < lower {
+                    Point::placeholder(tl_val, lower, Side::Top)
+                } else {
+                    tl_pt.clone()
+                })
             } else { None },
         ];
 
         // Filter nulls and deduplicate (matching Java's .distinct().filter())
+        // Java: Shape.java:238 - List<Point> slim = eightPoints.stream().distinct().filter(x -> x!=null).collect(...)
+        // CRITICAL: Deduplication uses Point.equals() which compares ALL fields (x, y, value, limit, side)
         let mut points: Vec<Point> = Vec::new();
         for opt_pt in eight_points.iter_mut() {
             if let Some(pt) = opt_pt.take() {
-                // Only add if not already present (deduplication)
-                if !points.iter().any(|existing| {
-                    const EPSILON: f64 = 1e-9;
-                    (existing.x - pt.x).abs() < EPSILON && (existing.y - pt.y).abs() < EPSILON
-                }) {
+                // Only add if not already present
+                // Uses Point::eq() which compares ALL fields, not just x,y
+                if !points.contains(&pt) {
                     points.push(pt);
                 }
+            }
+        }
+
+        // Interpolate placeholder points AFTER deduplication
+        // Java: Shape.java:239-242 - for (int i = 0; i < slim.size(); i++)
+        // CRITICAL: This is where actual interpolation happens!
+        for i in 0..points.len() {
+            if points[i].is_placeholder() {
+                // Interpolate this placeholder point
+                let limit = points[i].limit.unwrap();
+                let side = points[i].side.unwrap();
+                points[i] = interp(limit, side);
             }
         }
 

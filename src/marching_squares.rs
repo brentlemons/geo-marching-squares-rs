@@ -111,13 +111,20 @@ fn process_band(grid: &GeoGrid, lower: f64, upper: f64) -> Result<Option<Feature
                 grid.config().smoothing_factor.into(),
             ) {
                 // Convert edges to polygon format
+                // Java: MarchingSquares.java:101-105 - round coordinates only at final output
                 for edge_list in edges {
                     let ring: Vec<Vec<f64>> = edge_list
                         .iter()
-                        .map(|p| vec![
-                            crate::types::round_coordinate(p.x),
-                            crate::types::round_coordinate(p.y)
-                        ])
+                        .filter_map(|p| {
+                            // Only output actual points (placeholders should have been interpolated)
+                            match (p.x, p.y) {
+                                (Some(x), Some(y)) => Some(vec![
+                                    crate::types::round_coordinate(x),
+                                    crate::types::round_coordinate(y)
+                                ]),
+                                _ => None,
+                            }
+                        })
                         .collect();
                     if ring.len() >= 3 {
                         polygons.push(ring);
@@ -206,10 +213,15 @@ fn process_isoline(grid: &GeoGrid, level: f64) -> Result<Option<Feature>> {
                 for segment in segments {
                     let line: Vec<Vec<f64>> = segment
                         .iter()
-                        .map(|p| vec![
-                            crate::types::round_coordinate(p.x),
-                            crate::types::round_coordinate(p.y)
-                        ])
+                        .filter_map(|p| {
+                            match (p.x, p.y) {
+                                (Some(x), Some(y)) => Some(vec![
+                                    crate::types::round_coordinate(x),
+                                    crate::types::round_coordinate(y)
+                                ]),
+                                _ => None,
+                            }
+                        })
                         .collect();
                     if line.len() >= 2 {
                         line_strings.push(line);
@@ -734,7 +746,7 @@ pub fn generate_isobands_phase2(grid: &GeoGrid, lower: f64, upper: f64) -> Resul
                     eprintln!("🔍 TOP BOUNDARY ({},{}) config={} tl={:.2} tr={:.2} br={:.2} bl={:.2} edges={}",
                         row, col, config, tl.value, tr.value, br.value, bl.value, shape.edges.len());
                     for (start, edge) in &shape.edges {
-                        eprintln!("   Edge: ({:.3},{:.3}) -> ({:.3},{:.3}) move={:?}",
+                        eprintln!("   Edge: ({:?},{:?}) -> ({:?},{:?}) move={:?}",
                             start.x, start.y, edge.end.x, edge.end.y, edge.move_dir);
                     }
                 }
@@ -743,7 +755,7 @@ pub fn generate_isobands_phase2(grid: &GeoGrid, lower: f64, upper: f64) -> Resul
                 if row >= 275 && row <= 290 && col >= 1790 && col <= 1797 {
                     eprintln!("   ✓ ({},{}) {} edges", row, col, shape.edges.len());
                     for (start, edge) in &shape.edges {
-                        eprintln!("      Edge: ({:.3},{:.3}) -> ({:.3},{:.3}) move={:?}",
+                        eprintln!("      Edge: ({:?},{:?}) -> ({:?},{:?}) move={:?}",
                             start.x, start.y, edge.end.x, edge.end.y, edge.move_dir);
                     }
                 }
@@ -786,9 +798,11 @@ pub fn generate_isobands_phase2(grid: &GeoGrid, lower: f64, upper: f64) -> Resul
             if let (Some(first), Some(last)) = (exterior.first(), exterior.last()) {
                 let is_closed = first.x == last.x && first.y == last.y;
                 if !is_closed {
-                    eprintln!("🚨 POLYGON {} NOT CLOSED from trace_ring! first=({:.12},{:.12}) last=({:.12},{:.12}), dist={:.6}",
-                        poly_idx, first.x, first.y, last.x, last.y,
-                        ((last.x - first.x).powi(2) + (last.y - first.y).powi(2)).sqrt());
+                    if let (Some(fx), Some(fy), Some(lx), Some(ly)) = (first.x, first.y, last.x, last.y) {
+                        eprintln!("🚨 POLYGON {} NOT CLOSED from trace_ring! first=({:.12},{:.12}) last=({:.12},{:.12}), dist={:.6}",
+                            poly_idx, fx, fy, lx, ly,
+                            ((lx - fx).powi(2) + (ly - fy).powi(2)).sqrt());
+                    }
                 }
             }
 
@@ -804,10 +818,15 @@ pub fn generate_isobands_phase2(grid: &GeoGrid, lower: f64, upper: f64) -> Resul
             // Now round all coordinates (including the duplicated closing point)
             let exterior_coords: Vec<Vec<f64>> = exterior_for_rounding
                 .iter()
-                .map(|p| vec![
-                    crate::types::round_coordinate(p.x),
-                    crate::types::round_coordinate(p.y)
-                ])
+                .filter_map(|p| {
+                    match (p.x, p.y) {
+                        (Some(x), Some(y)) => Some(vec![
+                            crate::types::round_coordinate(x),
+                            crate::types::round_coordinate(y)
+                        ]),
+                        _ => None,
+                    }
+                })
                 .collect();
             polygon_rings.push(exterior_coords);
 
@@ -822,10 +841,15 @@ pub fn generate_isobands_phase2(grid: &GeoGrid, lower: f64, upper: f64) -> Resul
                 // Now round all coordinates
                 let hole_coords: Vec<Vec<f64>> = hole_for_rounding
                     .iter()
-                    .map(|p| vec![
-                        crate::types::round_coordinate(p.x),
-                        crate::types::round_coordinate(p.y)
-                    ])
+                    .filter_map(|p| {
+                        match (p.x, p.y) {
+                            (Some(x), Some(y)) => Some(vec![
+                                crate::types::round_coordinate(x),
+                                crate::types::round_coordinate(y)
+                            ]),
+                            _ => None,
+                        }
+                    })
                     .collect();
                 polygon_rings.push(hole_coords);
             }

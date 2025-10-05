@@ -40,67 +40,111 @@ impl GridPoint {
     }
 }
 
-/// A simple 2D point for geometric calculations
+/// A point that can be either actual (with coordinates) or placeholder (to be interpolated)
+///
+/// Java: Shape.java Point class
+/// This matches the Java implementation where Points can be:
+/// - Actual: x and y are set (for corners that fall within the band)
+/// - Placeholder: x and y are null, with value/limit/side set (to be interpolated later)
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct Point {
-    /// X coordinate (longitude for geographic data)
-    pub x: f64,
-    /// Y coordinate (latitude for geographic data)
-    pub y: f64,
+    /// X coordinate (longitude for geographic data) - None for placeholder points
+    pub x: Option<f64>,
+    /// Y coordinate (latitude for geographic data) - None for placeholder points
+    pub y: Option<f64>,
+    /// Value at this point (for placeholder points awaiting interpolation)
+    pub value: Option<f64>,
+    /// Threshold limit (upper or lower) for interpolation
+    pub limit: Option<f64>,
+    /// Which side of the cell this point is on (for interpolation)
+    pub side: Option<Side>,
 }
 
 impl Point {
-    /// Create a new point
-    pub const fn new(x: f64, y: f64) -> Self {
-        Self { x, y }
-    }
-
-    /// Create a point from longitude and latitude
-    /// Note: Coordinate rounding should be applied AFTER PROJ transformation
-    /// to ensure consistency across all points (grid corners and interpolated edges)
-    pub fn from_lon_lat(lon: f64, lat: f64) -> Self {
+    /// Create an actual point with coordinates set
+    /// Java: Shape.java:182-185 - new Point(coords.getLongitude(), coords.getLatitude())
+    pub const fn actual(x: f64, y: f64) -> Self {
         Self {
-            x: lon,
-            y: lat,
+            x: Some(x),
+            y: Some(y),
+            value: None,
+            limit: None,
+            side: None,
         }
     }
 
-    /// Get longitude (assuming this point represents geographic coordinates)
-    pub fn lon(&self) -> f64 {
+    /// Create a placeholder point (to be interpolated later)
+    /// Java: Shape.java:229-236 - creates Points with x=null, y=null
+    pub const fn placeholder(value: f64, limit: f64, side: Side) -> Self {
+        Self {
+            x: None,
+            y: None,
+            value: Some(value),
+            limit: Some(limit),
+            side: Some(side),
+        }
+    }
+
+    /// Create a new point (legacy compatibility - creates actual point)
+    pub const fn new(x: f64, y: f64) -> Self {
+        Self::actual(x, y)
+    }
+
+    /// Create a point from longitude and latitude (creates actual point)
+    pub fn from_lon_lat(lon: f64, lat: f64) -> Self {
+        Self::actual(lon, lat)
+    }
+
+    /// Get longitude (returns None for placeholder points)
+    pub fn lon(&self) -> Option<f64> {
         self.x
     }
 
-    /// Get latitude (assuming this point represents geographic coordinates)
-    pub fn lat(&self) -> f64 {
+    /// Get latitude (returns None for placeholder points)
+    pub fn lat(&self) -> Option<f64> {
         self.y
+    }
+
+    /// Check if this is a placeholder point (needs interpolation)
+    pub fn is_placeholder(&self) -> bool {
+        self.x.is_none() && self.y.is_none()
+    }
+
+    /// Check if this is an actual point (has coordinates)
+    pub fn is_actual(&self) -> bool {
+        self.x.is_some() && self.y.is_some()
     }
 }
 
 impl From<GridPoint> for Point {
     fn from(grid_point: GridPoint) -> Self {
-        Self {
-            x: grid_point.lon,
-            y: grid_point.lat,
-        }
+        Self::actual(grid_point.lon, grid_point.lat)
     }
 }
 
 // Implement Hash and Eq for Point to enable HashMap usage
-// Uses bitwise equality to match Java's Double.equals() behavior
-// This ensures exact matching for edge lookups in the HashMap
+// Java: Point.java equals() and hashCode() compare ALL fields
+// This is CRITICAL for deduplication and HashMap lookups
 impl Hash for Point {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        // Use exact bit patterns for hashing (matches Java Double.hashCode())
-        self.x.to_bits().hash(state);
-        self.y.to_bits().hash(state);
+        // Hash all fields - matches Java Point.hashCode()
+        self.x.map(|v| v.to_bits()).hash(state);
+        self.y.map(|v| v.to_bits()).hash(state);
+        self.value.map(|v| v.to_bits()).hash(state);
+        self.limit.map(|v| v.to_bits()).hash(state);
+        self.side.hash(state);
     }
 }
 
 impl PartialEq for Point {
     fn eq(&self, other: &Self) -> bool {
-        // Exact bitwise equality to match Java's Double.equals()
-        // This ensures HashMap lookups work correctly for edge tracing
-        self.x.to_bits() == other.x.to_bits() && self.y.to_bits() == other.y.to_bits()
+        // Compare ALL fields - matches Java Point.equals()
+        // CRITICAL: Not just x,y! Must include value, limit, side
+        self.x == other.x
+            && self.y == other.y
+            && self.value == other.value
+            && self.limit == other.limit
+            && self.side == other.side
     }
 }
 
@@ -123,7 +167,7 @@ impl Default for InterpolationMethod {
 }
 
 /// Represents a side of a grid cell for marching squares algorithm
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Side {
     Top,
     Right,
