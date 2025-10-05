@@ -758,26 +758,21 @@ pub fn generate_isobands_phase2(grid: &GeoGrid, lower: f64, upper: f64) -> Resul
     let multi_polygon: Vec<Vec<Vec<Vec<f64>>>> = organized
         .into_iter()
         .enumerate()
-        .filter_map(|(poly_idx, (exterior, holes))| {
-            // CRITICAL FIX: Skip unclosed rings that hit grid boundaries
-            // These are open contours, not valid polygons - forcing them closed creates diagonals
-            if let (Some(first), Some(last)) = (exterior.first(), exterior.last()) {
-                const EPSILON: f64 = 1e-6; // ~10cm at equator
-                let dx = last.x - first.x;
-                let dy = last.y - first.y;
-                let dist = (dx * dx + dy * dy).sqrt();
+        .map(|(poly_idx, (exterior, holes))| {
+            let mut polygon_rings = Vec::new();
 
-                if dist > EPSILON {
-                    eprintln!("⚠️ SKIPPING unclosed polygon {} (first != last by {:.6}°): first=({:.6},{:.6}) last=({:.6},{:.6})",
-                        poly_idx, dist, first.x, first.y, last.x, last.y);
-                    return None; // Skip this polygon entirely
+            // Debug: Check if ring is actually closed before we do anything
+            if let (Some(first), Some(last)) = (exterior.first(), exterior.last()) {
+                let is_closed = first.x == last.x && first.y == last.y;
+                if !is_closed {
+                    eprintln!("🚨 POLYGON {} NOT CLOSED from trace_ring! first=({:.12},{:.12}) last=({:.12},{:.12}), dist={:.6}",
+                        poly_idx, first.x, first.y, last.x, last.y,
+                        ((last.x - first.x).powi(2) + (last.y - first.y).powi(2)).sqrt());
                 }
             }
 
-            let mut polygon_rings = Vec::new();
-
-            // Close the ring BEFORE rounding to ensure first == last after rounding
-            // trace_ring returns rings where first and last should be bitwise identical.
+            // CRITICAL FIX: Close the ring BEFORE rounding to ensure first == last after rounding
+            // trace_ring returns rings where first and last are bitwise identical.
             // If we round first, they may round to different values, creating diagonal artifacts.
             // Solution: Duplicate the first point BEFORE rounding, then round all points together.
             let mut exterior_for_rounding = exterior.clone();
@@ -814,7 +809,7 @@ pub fn generate_isobands_phase2(grid: &GeoGrid, lower: f64, upper: f64) -> Resul
                 polygon_rings.push(hole_coords);
             }
 
-            Some(polygon_rings)
+            polygon_rings
         })
         .collect();
 
