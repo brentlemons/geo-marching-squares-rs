@@ -732,6 +732,17 @@ pub fn generate_isobands_phase2(grid: &GeoGrid, lower: f64, upper: f64) -> Resul
                             start.x, start.y, edge.end.x, edge.end.y, edge.move_dir);
                     }
                 }
+
+                // Debug cells around (282,1797) - the problem area
+                if row >= 275 && row <= 290 && col >= 1790 && col <= 1797 {
+                    eprintln!("🎯 DEBUG CELL ({},{}) config={} tl={:.2} tr={:.2} br={:.2} bl={:.2} edges={}",
+                        row, col, config, tl.value, tr.value, br.value, bl.value, shape.edges.len());
+                    for (start, edge) in &shape.edges {
+                        eprintln!("   Edge: ({:.3},{:.3}) -> ({:.3},{:.3}) move={:?}",
+                            start.x, start.y, edge.end.x, edge.end.y, edge.move_dir);
+                    }
+                }
+
                 let corners = (tl.value as f64, tr.value as f64, br.value as f64, bl.value as f64);
                 cell_row.push(Some(CellWithEdges::new_with_config(shape, config, corners)));
             } else {
