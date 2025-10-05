@@ -73,11 +73,11 @@ pub fn interpolate_point(
     let x = (1.0 - new_mu) * point0.x + new_mu * point1.x;
     let y = (1.0 - new_mu) * point0.y + new_mu * point1.y;
 
-    // CRITICAL: Round coordinates immediately to match Java's behavior
-    // Java rounds at polygon construction (MarchingSquares.java line 101-105, positionAccuracy=5)
-    // This ensures adjacent cells generate identical coordinates for shared grid points
-    use crate::types::round_coordinate;
-    Point::from_lon_lat(round_coordinate(x), round_coordinate(y))
+    // CRITICAL: Return UNROUNDED coordinates to match Java's behavior
+    // Java keeps coordinates unrounded during interpolation and edge tracing,
+    // only rounding at final polygon construction (MarchingSquares.java line 101-105)
+    // This ensures adjacent cells can use HashMap lookups with bitwise equality
+    Point::from_lon_lat(x, y)
 }
 
 /// Interpolates a point along a specific side of a grid cell.
@@ -206,8 +206,7 @@ pub fn interpolate_point_great_circle(
         // Points are too close or antipodal - fall back to linear interpolation
         let x = (1.0 - new_mu) * point0.x + new_mu * point1.x;
         let y = (1.0 - new_mu) * point0.y + new_mu * point1.y;
-        use crate::types::round_coordinate;
-        return Point::from_lon_lat(round_coordinate(x), round_coordinate(y));
+        return Point::from_lon_lat(x, y);
     }
 
     // Interpolate along great circle
@@ -221,11 +220,10 @@ pub fn interpolate_point_great_circle(
     let lat = z.atan2((x * x + y * y).sqrt());
     let lon = y.atan2(x);
 
-    // CRITICAL: Round coordinates immediately to match Java's behavior
-    // Java rounds at polygon construction (MarchingSquares.java line 101-105, positionAccuracy=5)
-    // This ensures adjacent cells generate identical coordinates for shared grid points
-    use crate::types::round_coordinate;
-    Point::from_lon_lat(round_coordinate(lon.to_degrees()), round_coordinate(lat.to_degrees()))
+    // CRITICAL: Return UNROUNDED coordinates to match Java's behavior
+    // Java keeps coordinates unrounded during interpolation and edge tracing,
+    // only rounding at final polygon construction (MarchingSquares.java line 101-105)
+    Point::from_lon_lat(lon.to_degrees(), lat.to_degrees())
 }
 
 #[cfg(test)]
